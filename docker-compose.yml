@@ -1,0 +1,27 @@
+version: "3.3"
+
+services:
+  cameraai:
+    container_name: cameraai
+    build: .
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports:
+      - 82:80
+    volumes:
+      - ./data_home_app_data:/home/app/data
+    restart: unless-stopped
+
+  visiondetection:
+    image: deepquestai/deepstack
+    ports:
+      - 123:5000
+    environment:
+      - VISION-DETECTION=True
+    volumes:
+      - ./data:/datastore
+    restart: unless-stopped
+
+    

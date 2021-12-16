@@ -1,0 +1,82 @@
+#--extra-vars '{"application":"name"}'
+- name: Setup cameraai on Home server
+  hosts: Home04
+  remote_user: "{{ remote_user }}"
+  become: yes
+  vars_files:
+  - vars/default.yml
+    
+  tasks:
+    - name: stop cameraai if running
+      docker_container:
+        name: cameraai
+        state: stopped
+      ignore_errors: yes
+    
+    - name: remove cameraai container
+      shell:
+        chdir: /home/{{ remote_user }}//docker/
+        cmd: docker rm cameraai
+      ignore_errors: yes
+
+    - name: create camerai destination folder
+      file:
+        path: /home/{{ remote_user }}/docker/cameraai
+        state: directory
+
+    - name: copy docker compose file
+      copy:
+        src: ./docker-compose.yml
+        dest: /home/{{ remote_user }}/docker/cameraai/docker-compose.yml
+        owner: "{{ remote_user }}"
+        group: root
+        mode: '0644'
+
+    - name: copy dockerfile
+      copy:
+        src: ./Dockerfile
+        dest: /home/{{ remote_user }}/docker/cameraai/Dockerfile
+        owner: "{{ remote_user }}"
+        group: root
+        mode: '0644'
+
+    - name: copy requirements
+      copy:
+        src: ./Requirements.txt
+        dest: /home/{{ remote_user }}/docker/cameraai/Requirements.txt
+        owner: "{{ remote_user }}"
+        group: root
+        mode: '0644'
+
+    - name: create code subfolder
+      file:
+        path: /home/{{ remote_user }}/docker/cameraai/code
+        state: directory
+        owner: "{{ remote_user }}"
+        mode: "u=rwx,g=rwx,o=rwx"
+
+    - name: copy code files
+      copy:
+        src: ./code/main.py
+        dest: /home/{{ remote_user }}/docker/cameraai/code/main.py
+        owner: "{{ remote_user }}"
+        group: root
+        mode: '0644'
+    
+    - name: copy template files
+      copy:
+        src: ./code/templates
+        dest: /home/{{ remote_user }}/docker/cameraai/code/
+        owner: "{{ remote_user }}"
+        group: root
+        mode: '0644'
+
+    - name: rebuilding cameraai
+      shell:
+        chdir: /home/{{ remote_user}}/docker/cameraai/
+        cmd: docker-compose -f ./docker-compose.yml up -d --build cameraai
+
+    - name: starting cameraai
+      shell:
+        chdir: /home/{{ remote_user}}/docker/cameraai/
+        cmd: docker-compose -f ./docker-compose.yml up -d
