@@ -1,49 +1,43 @@
-from flask import Flask, render_template, request, abort, send_file
+from flask import Flask, render_template, request, abort, send_file, redirect
+
+from flask.helpers import total_seconds
 import requests
 from requests.auth import HTTPDigestAuth
 import os, sys
-from datetime import datetime
+import os.path
+from datetime import datetime, time
 from PIL import Image, ImageFont, ImageDraw, ImageEnhance
 import logging
 import syslog
+import threading
+
 syslog.openlog(sys.argv[0])
+threadlock = threading.Lock
+Analysis_threads = []
+Analysis_pool = threading.BoundedSemaphore(value=10)
 
 app = Flask(__name__, template_folder='templates')
 
-@app.route("/")
+class AnalysisThread(threading.Thread):
+    def __init__(self, current_working_dir, datestamp, filename):
+        threading.Thread.__init__(self)
+        self.current_working_dir = current_working_dir
+        self.datestamp = datestamp
+        self.filename = filename
+        
+    def run(self):
+        analyze_picture(self.current_working_dir, self.datestamp, self.filename)
+        Analysis_pool.release()
+
+@app.route('/')
 def hello_world():
-    return "<p>Hello, World!</p>"
+    return "<meta http-equiv='refresh' content='30'>  <br> HELLO WORLD <br>{} working Threads <br><a href='/getImage'> Get Image</a><br><a href='files'>data </a>".format(len(Analysis_threads))
 
-@app.route("/getImage")
-def getImage():
-    logging.info("app.route(/getImage) -> getImage()")
-    url = "http://10.0.66.70/Streaming/channels/1/picture"
-    authen = HTTPDigestAuth{'test','T3sterer'}
-    timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-    datestamp= datetime.utcnow().strftime("%Y%m%d")
-    filename = "{}".format(timestamp)
-    current_working_dir = os.getcwd()
-
-    download_Picture(url, authen, current_working_dir, filename)
-    predictions = analyze_picture(current_working_dir, datestamp, filename)
-    print("end of analyzation")
-    # return send_file("analyzed/" + datestamp + "/" +filename + "_analyzed.jpg", mimetype='image/gif')
-    return "Image {} analyzed, <br>{} items predicted {}<br>stored ".format(filename, len(predictions), predictions)
-
-@app.route("/analyze", methods = ['POST'])
-def analyze():
-    data = request.form # a multidict containing POST data
-    print(data)
-    if request.method == 'POST':
-        f = request.form
-        print(f)
-    return "<p>data received!</p>"
-
-
-@app.route('/list', defaults={'req_path': ''})
-@app.route('/list/<path:req_path>')
+@app.route('/files', defaults={'req_path': ''})
+@app.route('/files/<path:req_path>')
 def dir_listing(req_path):
-    BASE_DIR = os.getcwd()
+    print("dir_listing")
+    BASE_DIR = '/Users/leoncornelissen/Dev/camera_ai/code/data'
 
     # Joining the base and the requested path
     abs_path = os.path.join(BASE_DIR, req_path)
@@ -57,8 +51,47 @@ def dir_listing(req_path):
         return send_file(abs_path)
 
     # Show directory contents
-    files = os.listdir(abs_path)
-    return render_template("{}/templates/dirtree.html".format(BASE_DIR), files=files)
+    files = sorted(os.listdir(abs_path))
+    template = "files.html"
+
+    return render_template(template, files=files)
+
+@app.route("/getImage")
+def getImage():
+    logging.info("app.route(/getImage) -> getImage()")
+    url = "http://10.0.66.70/Streaming/channels/1/picture"
+    authen = HTTPDigestAuth('test','T3sterer')
+    timestamp = datetime.utcnow()
+    datestamp= datetime.utcnow().strftime("%Y%m%d")
+    filename = "{}".format(timestamp.strftime("%Y%m%d-%H%M%S"))
+    current_working_dir = os.getcwd()
+
+    download_Picture(url, authen, current_working_dir, filename)
+    download_time = datetime.utcnow()
+    #START THREAD
+    Analysis_pool.acquire()
+    thread = AnalysisThread(current_working_dir, datestamp, filename)
+    thread.start()
+    Analysis_threads.append(thread)
+    # predictions = analyze_picture(current_working_dir, datestamp, filename)
+    print("end of analyzation")
+    end_time = datetime.utcnow()
+    download_duration = (download_time - timestamp).total_seconds()
+    analysis_dutation = (end_time - download_time).total_seconds()
+    total_duration = (end_time - timestamp).total_seconds()
+    # return send_file("analyzed/" + datestamp + "/" +filename + "_analyzed.jpg", mimetype='image/gif')
+    # return "Image {} analyzed, <br><br> download time: {} s + analysis time: {} s -> {} seconds".format(filename, download_duration, analysis_dutation, total_duration)
+    return redirect("http://10.0.0.216", code=302)
+
+@app.route("/analyze", methods = ['POST'])
+def analyze():
+    data = request.form # a multidict containing POST data
+    print(data)
+    if request.method == 'POST':
+        f = request.form
+        print(f)
+    return "<p>data received!</p>"
+
 
 
 def analyze_picture(current_working_dir, datestamp, filename):
@@ -67,7 +100,7 @@ def analyze_picture(current_working_dir, datestamp, filename):
     target_folder = "{}/data/analyzed/{}".format(current_working_dir, datestamp)
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
-    input_file = "{}/data/rawData/{}".format(current_working_dir,filename)
+    input_file = "{}/data/rawData/{}.jpg".format(current_working_dir,filename)
     output_file = "{}/data/analyzed/{}/{}".format(current_working_dir,datestamp, filename)
     try:
         image_data = open(input_file,"rb").read()
@@ -101,11 +134,13 @@ def analyze_picture(current_working_dir, datestamp, filename):
 
         i += 1
         print(item["label"])
-    print("saving original object")
-    safeTarget = "{}/data/analyzed/{}/{}-analyzed.jpg".format(current_working_dir, datestamp, filename)
-    print(safeTarget)
-    image.save(safeTarget,"JPEG")
-    return response["predictions"]
+    print(response["predictions"])
+    if response["predictions"] != []:
+        print("only saving image once something is found")
+        print("saving original object")
+        safeTarget = "{}/data/analyzed/{}/{}-analyzed.jpg".format(current_working_dir, datestamp, filename)
+        print(safeTarget)
+        image.save(safeTarget,"JPEG")
 
 def download_Picture(url, authen, file_location, filename):
     #bug : authen is not working correctly, for now hard coded
@@ -116,7 +151,7 @@ def download_Picture(url, authen, file_location, filename):
         os.makedirs(target_folder)
     rawPictureData = requests.get(url, auth=HTTPDigestAuth('test','T3sterer'))    
     print("response code : {}".format(rawPictureData.status_code))
-    target_file = "{}/data/rawData/{}".format(file_location, filename)
+    target_file = "{}/data/rawData/{}.jpg".format(file_location, filename)
     if rawPictureData.status_code == 200:
         print("valid response code, now saving the image")
         with open(target_file, 'wb') as f:

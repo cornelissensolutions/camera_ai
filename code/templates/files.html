@@ -1,0 +1,13 @@
+{{ request.path }}
+<ul>
+    <li>
+        <!-- <a href="{{ (request.path.split('/')[-2] ) }}">..</a>  -->
+    </li>
+    {% for file in files %}
+    <li>
+        <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
+            {{ (request.path + '/' if request.path != '/' else '') + file }}
+        </a>
+    </li>
+    {% endfor %}
+</ul>
