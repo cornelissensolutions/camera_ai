@@ -1,7 +1,11 @@
-{{ request.path }}
+
+<!doctype html>
+<title>Path: {{ request.path }}</title>
+<h1>{{ request.path }}</h1>
+
 <ul>
     <li>
-        <!-- <a href="{{ (request.path.split('/')[-2] ) }}">..</a>  -->
+        <a href="..">..</a> 
     </li>
     {% for file in files %}
     <li>
