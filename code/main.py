@@ -112,24 +112,24 @@ def dir_listing(req_path):
 @app.route("/trigger")
 def webtrigger():
     getImageStream()
-    return redirect("http://127.0.0.1", code=302)
+    return redirect('/')
 
 @app.route("/startTimer")
 def webStartTimer():
     autoTimer.start()
-    return redirect("http://127.0.0.1", code=302) 
+    return redirect('/')
 
 @app.route("/stopTimer")
 def webStopTimer():
     autoTimer.cancel()
-    return redirect("http://127.0.0.1", code=302)
+    return redirect('/')
 
 # @app.route("updateTimer", method=['POST'])
 # def updateTimer():
 #     i = request.form["newTimerValue"]
 #     print(i)
 #     autoTimer.updateTimerFreq(i)
-#     return redirect("http://127.0.0.1", code=302)
+#     return redirect('/')
 @app.route("/stopServer")
 def stopWebServer():
     shutdown_server()
@@ -138,12 +138,12 @@ def stopWebServer():
 @app.route("/enableDebug")
 def enableDebug():
     CIPS.enableDebug()
-    return redirect("http://127.0.0.1", code=302)
+    return redirect('/')
     
 @app.route("/disableDebug")
 def disableDebug():
     CIPS.disableDebug()
-    return redirect("http://127.0.0.1", code=302)
+    return redirect('/')
 
 
 
