@@ -89,7 +89,7 @@ def hello_world():
 @app.route('/files/<path:req_path>')
 def dir_listing(req_path):
     print("dir_listing")
-    BASE_DIR = '/Users/leoncornelissen/Dev/camera_ai/code/data'
+    BASE_DIR = '{}/data'.format(os.getcwd())
 
     # Joining the base and the requested path
     abs_path = os.path.join(BASE_DIR, req_path)
