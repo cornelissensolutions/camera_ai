@@ -85,7 +85,7 @@ def hello_world():
     return render_template("main.html",threads=len(Analysis_threads), timer = autoTimer.status())
 
 @app.route('/files', defaults={'req_path': ''})
-@app.route('/files/', defaults={'req_path': ''})
+# @app.route('/files/', defaults={'req_path': ''})
 @app.route('/files/<path:req_path>')
 def dir_listing(req_path):
     print("dir_listing")
