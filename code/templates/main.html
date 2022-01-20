@@ -6,6 +6,10 @@
 <br><a href='files'>files </a>
 <br>
 <br>TIMER : {{ timer }} - <a href="/startTimer">Start auto timer</a> / <a href="/stopTimer">Stop auto timer</a>
+<form action="updateTimer" method="POST">
+    <p>seconds <input type = "text" name = "newTimerValue"/></p>
+    <p><input type="submit" value="submit"/></p>
+</form>
 <br>DEBUG : {{ debug }} - <a href="/enableDebug">enable</a> / <a href="/disableDebug">disable</a>
 <br><br><br>
 <a href="/stopServer">STOP</a>

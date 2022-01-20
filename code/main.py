@@ -14,15 +14,13 @@ from threading import Thread, Timer, Event
 import CIPS_Analyzer
 import CIPS_Camera
 class AnalysisThread(threading.Thread):
-    def __init__(self, current_working_dir, datestamp, filename):
+    def __init__(self, cameraObject):
         threading.Thread.__init__(self)
-        self.current_working_dir = current_working_dir
-        self.datestamp = datestamp
-        self.filename = filename
-        
+        self.camera = cameraObject
+
     def run(self):
         start_time = datetime.utcnow()
-        CIPS.analyze_picture(self.current_working_dir, self.datestamp, self.filename)
+        CIPS.run(self.camera)
         Analysis_pool.release()
         Analysis_threads.remove(self)
         end_time = datetime.utcnow()
@@ -62,6 +60,11 @@ class AutoAnalysisTimer():
         else:
             print("Timer never started or failed to initialize.")
 
+    def updateTimerFreq(self,newTime):
+        self.cancel()
+        self.timer = newTime
+        self.start()
+
     def status(self):
         return self._should_continue
 
@@ -74,7 +77,7 @@ current_working_dir = os.getcwd()
 
 app = Flask(__name__, template_folder='templates')
 CIPS = CIPS_Analyzer.CIPS()
-CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted_plant"] )
+CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted plant"] )
 
 
 
@@ -121,6 +124,12 @@ def webStopTimer():
     autoTimer.cancel()
     return redirect("http://127.0.0.1", code=302)
 
+# @app.route("updateTimer", method=['POST'])
+# def updateTimer():
+#     i = request.form["newTimerValue"]
+#     print(i)
+#     autoTimer.updateTimerFreq(i)
+#     return redirect("http://127.0.0.1", code=302)
 @app.route("/stopServer")
 def stopWebServer():
     shutdown_server()
@@ -135,6 +144,10 @@ def enableDebug():
 def disableDebug():
     CIPS.disableDebug()
     return redirect("http://127.0.0.1", code=302)
+
+
+
+
 def shutdown_server():
     func = request.environ.get('werkzeug.server.shutdown')
     if func is None:
@@ -144,48 +157,17 @@ def shutdown_server():
 
 def getImageStream():
     print("getImageStream")
-    timestamp = datetime.utcnow()
-    stream = CIPS.get_ImageStream(CAM ,timestamp)
-    CIPS._analyse_image_stream("Achterdeur", stream, timestamp)
-
-def getImage():
-    print("getImage")
-    url = "http://10.0.66.70/Streaming/channels/1/picture"
-    authen = HTTPDigestAuth('test','T3sterer')
-    timestamp = datetime.utcnow()
-    datestamp= datetime.utcnow().strftime("%Y%m%d")
-    filename = "{}".format(timestamp.strftime("%Y%m%d-%H%M%S"))
-
-    download_Picture(url, authen, current_working_dir, filename)
-    download_time = datetime.utcnow()
     #START analysis THREAD
     Analysis_pool.acquire()
-    thread = AnalysisThread(current_working_dir, datestamp, filename)
+    thread = AnalysisThread(CAM)
     thread.start()
     Analysis_threads.append(thread)
 
 
-def download_Picture(url, authen, file_location, filename):
-    print("download_Picture")
-    #bug : authen is not working correctly, for now hard coded
-    logging.info("download_Picture({} {} {})".format(url, file_location, filename))
-
-    target_folder = "{}/data/rawData/".format(os.getcwd())
-    if not os.path.exists(target_folder):
-        os.makedirs(target_folder)
-    rawPictureData = requests.get(url, auth=HTTPDigestAuth('test','T3sterer'))    
-    print("response code : {}".format(rawPictureData.status_code))
-    target_file = "{}/data/rawData/{}.jpg".format(file_location, filename)
-    if rawPictureData.status_code == 200:
-        
-
-        print("valid response code, now saving the image")
-        with open(target_file, 'wb') as f:
-            f.write(rawPictureData.content)
 
 
 
-autoTimer = AutoAnalysisTimer(6, getImageStream)
+autoTimer = AutoAnalysisTimer(5, getImageStream)
 
 if __name__ == '__main__':
     app.debug = True

@@ -3,3 +3,7 @@ support for multiple cameras
 enable / disable saving of cropped images
 text in different color then background color
 load camera's ini files into web ui
+add exclude area on camera feed
+add person too long in view recording
+add saving of videostream instead of images
+add changing timer frequency via web ui
