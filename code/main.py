@@ -21,9 +21,12 @@ class AnalysisThread(threading.Thread):
         self.filename = filename
         
     def run(self):
+        start_time = datetime.utcnow()
         CIPS.analyze_picture(self.current_working_dir, self.datestamp, self.filename)
         Analysis_pool.release()
         Analysis_threads.remove(self)
+        end_time = datetime.utcnow()
+        print("Thread duration: {}".format((end_time-start_time).total_seconds))
 
 class AutoAnalysisTimer():
     def __init__(self, timer, target):
@@ -108,18 +111,18 @@ def dir_listing(req_path):
 @app.route("/trigger")
 def webtrigger():
     getImage()
-    return redirect("http://10.0.0.216", code=302)
+    return redirect("http://127.0.0.1", code=302)
 
 @app.route("/startTimer")
 def webStartTimer():
     autoTimer.start()
-    return redirect("http://10.0.0.216", code=302) 
+    return redirect("http://127.0.0.1", code=302) 
 
 
 @app.route("/stopTimer")
 def webStopTimer():
     autoTimer.cancel()
-    return redirect("http://10.0.0.216", code=302)
+    return redirect("http://127.0.0.1", code=302)
 
 def getImage():
     print("getImage")

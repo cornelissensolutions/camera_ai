@@ -5,26 +5,29 @@ from io import BytesIO
 import logging, os, os.path
 from PIL import Image, ImageFont, ImageDraw, ImageEnhance
 import requests
+import CIPS_Camera
 
 class CIPS:
     DEBUG = False
     def __init__(self):
-        print("nit")
+        print("init CIPS Analyzer")
 
-    def get_Picture(self, url, auth, timeHash):
+    def get_Picture(self, url, auth, cameraName, timeStamp):
+        filename = "{}_{}".format(cameraName, timeStamp.strftime("%Y%m%d-%H%M%S"))
+        target_file_location = "{}/data/rawData/{}.jpg".format(os.getcwd(), filename)
         response = requests.get(url)
         img = Image.open(BytesIO(response.content)).convert("RGB")   
         if self.DEBUG:
-            target_file = "{}/data/rawData/{}.jpg".format(file_location, filename)
+            target_file = "{}/data/rawData/{}.jpg".format(os.getcwd(), filename)
             print("valid response code, now saving the image")
             with open(target_file, 'wb') as f:
                 f.write(response.content)
         return img
     
-    def _analyse_image(self, image, timehash):
+    def _analyse_image(self, image, timeStamp):
         print("_analyze")
 
-        
+
     def analyze_picture(self, current_working_dir, datestamp, filename):
         logging.info("analyze_picture({} {} {})".format(current_working_dir, datestamp, filename))
         print("analyze picture with params : {} {} {}".format(current_working_dir, datestamp, filename))
