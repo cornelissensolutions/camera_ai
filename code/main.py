@@ -12,7 +12,7 @@ import syslog
 import threading
 from threading import Thread, Timer, Event
 import CIPS_Analyzer
-
+import CIPS_Camera
 class AnalysisThread(threading.Thread):
     def __init__(self, current_working_dir, datestamp, filename):
         threading.Thread.__init__(self)
@@ -26,7 +26,7 @@ class AnalysisThread(threading.Thread):
         Analysis_pool.release()
         Analysis_threads.remove(self)
         end_time = datetime.utcnow()
-        print("Thread duration: {}".format((end_time-start_time).total_seconds))
+        print("Thread duration: {}".format((end_time-start_time).total_seconds()))
 
 class AutoAnalysisTimer():
     def __init__(self, timer, target):
@@ -63,8 +63,6 @@ class AutoAnalysisTimer():
             print("Timer never started or failed to initialize.")
 
     def status(self):
-        print("AutoTimer + status")
-        print(self._should_continue)
         return self._should_continue
 
 
@@ -76,16 +74,16 @@ current_working_dir = os.getcwd()
 
 app = Flask(__name__, template_folder='templates')
 CIPS = CIPS_Analyzer.CIPS()
-
+CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted_plant"] )
 
 
 
 @app.route('/')
 def hello_world():
-    return render_template("main.html",threads=len(Analysis_threads), timer = autoTimer.status())
+    return render_template("main.html",threads=len(Analysis_threads), timer = autoTimer.status(), debug = CIPS.debugStatus())
 
 @app.route('/files', defaults={'req_path': ''})
-# @app.route('/files/', defaults={'req_path': ''})
+@app.route('/files/', defaults={'req_path': ''})
 @app.route('/files/<path:req_path>')
 def dir_listing(req_path):
     print("dir_listing")
@@ -110,7 +108,7 @@ def dir_listing(req_path):
 
 @app.route("/trigger")
 def webtrigger():
-    getImage()
+    getImageStream()
     return redirect("http://127.0.0.1", code=302)
 
 @app.route("/startTimer")
@@ -118,11 +116,37 @@ def webStartTimer():
     autoTimer.start()
     return redirect("http://127.0.0.1", code=302) 
 
-
 @app.route("/stopTimer")
 def webStopTimer():
     autoTimer.cancel()
     return redirect("http://127.0.0.1", code=302)
+
+@app.route("/stopServer")
+def stopWebServer():
+    shutdown_server()
+    return "server shutting down"
+
+@app.route("/enableDebug")
+def enableDebug():
+    CIPS.enableDebug()
+    return redirect("http://127.0.0.1", code=302)
+    
+@app.route("/disableDebug")
+def disableDebug():
+    CIPS.disableDebug()
+    return redirect("http://127.0.0.1", code=302)
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()     
+
+
+def getImageStream():
+    print("getImageStream")
+    timestamp = datetime.utcnow()
+    stream = CIPS.get_ImageStream(CAM ,timestamp)
+    CIPS._analyse_image_stream("Achterdeur", stream, timestamp)
 
 def getImage():
     print("getImage")
@@ -161,8 +185,8 @@ def download_Picture(url, authen, file_location, filename):
 
 
 
-autoTimer = AutoAnalysisTimer(6, getImage)
-DEBUG = False
+autoTimer = AutoAnalysisTimer(6, getImageStream)
+
 if __name__ == '__main__':
     app.debug = True
     app.run(host="0.0.0.0", port=80)

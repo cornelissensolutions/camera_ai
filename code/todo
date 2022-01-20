@@ -1,0 +1,5 @@
+save images based on timezone 
+support for multiple cameras
+enable / disable saving of cropped images
+text in different color then background color
+load camera's ini files into web ui

@@ -10,4 +10,4 @@ IP: 10.0.66.70
 URL: http://10.0.66.70/Streaming/channels/1/picture
 username: admin
 password: tester
-exclude_objects: ["potted_plant", "bench"]
+exclude_objects: ["potted_plant", "bench", "motorcycle"]
