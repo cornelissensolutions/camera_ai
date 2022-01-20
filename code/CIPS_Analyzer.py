@@ -35,7 +35,11 @@ class CIPS:
     def get_ImageStream(self, camera, timeStamp):
         filename = "{}_{}".format(camera.name, timeStamp.strftime("%Y%m%d-%H%M%S"))
         target_file_location = "{}/data/rawData/{}.jpg".format(self.current_working_dir, filename)
-        response = requests.get(camera.url, auth=camera.auth)
+        try:
+            response = requests.get(camera.url, auth=camera.auth)
+        except ConnectionError:
+            print("CONNECTION ERROR")
+            return False
         if response.status_code == 200:
             img = response.content
             if self.DEBUG:
