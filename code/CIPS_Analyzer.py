@@ -1,14 +1,30 @@
 """"
 Image analyzer class
 """
+from io import BytesIO
 import logging, os, os.path
 from PIL import Image, ImageFont, ImageDraw, ImageEnhance
 import requests
 
 class CIPS:
+    DEBUG = False
     def __init__(self):
         print("nit")
 
+    def get_Picture(self, url, auth, timeHash):
+        response = requests.get(url)
+        img = Image.open(BytesIO(response.content)).convert("RGB")   
+        if self.DEBUG:
+            target_file = "{}/data/rawData/{}.jpg".format(file_location, filename)
+            print("valid response code, now saving the image")
+            with open(target_file, 'wb') as f:
+                f.write(response.content)
+        return img
+    
+    def _analyse_image(self, image, timehash):
+        print("_analyze")
+
+        
     def analyze_picture(self, current_working_dir, datestamp, filename):
         logging.info("analyze_picture({} {} {})".format(current_working_dir, datestamp, filename))
         print("analyze picture with params : {} {} {}".format(current_working_dir, datestamp, filename))
@@ -50,6 +66,7 @@ class CIPS:
             i += 1
             print(item["label"])
         print(response["predictions"])
+
         if response["predictions"] != []:
             print("only saving image once something is found")
             print("saving original object")

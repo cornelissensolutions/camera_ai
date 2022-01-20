@@ -4,21 +4,15 @@ from flask.helpers import total_seconds
 import requests
 from requests.auth import HTTPDigestAuth
 import os, sys
-import os.path
+import os.path, glob
 from datetime import datetime, time
 
 import logging, logging.handlers
 import syslog
 import threading
+from threading import Thread, Timer, Event
 import CIPS_Analyzer
 
-syslog.openlog(sys.argv[0])
-threadlock = threading.Lock
-Analysis_threads = []
-Analysis_pool = threading.BoundedSemaphore(value=10)
-
-app = Flask(__name__, template_folder='templates')
-CIPS = CIPS_Analyzer.CIPS()
 class AnalysisThread(threading.Thread):
     def __init__(self, current_working_dir, datestamp, filename):
         threading.Thread.__init__(self)
@@ -31,11 +25,64 @@ class AnalysisThread(threading.Thread):
         Analysis_pool.release()
         Analysis_threads.remove(self)
 
+class AutoAnalysisTimer():
+    def __init__(self, timer, target):
+        self._should_continue = False
+        self.is_running = False       
+        self.timer = timer
+        self.target = target
+        self.thread = None
+
+    def _handle_target(self):
+        print("_handle_target")
+        self.is_running = True
+        self.target()
+        self.is_running = False
+        self._start_timer()
+
+    def _start_timer(self):
+        if self._should_continue:
+            self.thread = Timer(self.timer, self._handle_target)
+            self.thread.start()
+
+    def start(self):
+        if not self._should_continue and not self.is_running:
+            self._should_continue = True
+            self._start_timer()
+        else:
+            print("Timer already started or running, please wait if you're restarting.")
+
+    def cancel(self):
+        if self.thread is not None:
+            self._should_continue = False # Just in case thread is running and cancel fails.
+            self.thread.cancel()
+        else:
+            print("Timer never started or failed to initialize.")
+
+    def status(self):
+        print("AutoTimer + status")
+        print(self._should_continue)
+        return self._should_continue
+
+
+syslog.openlog(sys.argv[0])
+threadlock = threading.Lock
+Analysis_threads = []
+Analysis_pool = threading.BoundedSemaphore(value=10)
+current_working_dir = os.getcwd()
+
+app = Flask(__name__, template_folder='templates')
+CIPS = CIPS_Analyzer.CIPS()
+
+
+
+
 @app.route('/')
 def hello_world():
-    return render_template("main.html",threads=len(Analysis_threads))
+    return render_template("main.html",threads=len(Analysis_threads), timer = autoTimer.status())
 
 @app.route('/files', defaults={'req_path': ''})
+@app.route('/files/', defaults={'req_path': ''})
 @app.route('/files/<path:req_path>')
 def dir_listing(req_path):
     print("dir_listing")
@@ -58,27 +105,41 @@ def dir_listing(req_path):
 
     return render_template(template, files=files)
 
-@app.route("/getImage")
+@app.route("/trigger")
+def webtrigger():
+    getImage()
+    return redirect("http://10.0.0.216", code=302)
+
+@app.route("/startTimer")
+def webStartTimer():
+    autoTimer.start()
+    return redirect("http://10.0.0.216", code=302) 
+
+
+@app.route("/stopTimer")
+def webStopTimer():
+    autoTimer.cancel()
+    return redirect("http://10.0.0.216", code=302)
+
 def getImage():
-    logging.info("app.route(/getImage) -> getImage()")
+    print("getImage")
     url = "http://10.0.66.70/Streaming/channels/1/picture"
     authen = HTTPDigestAuth('test','T3sterer')
     timestamp = datetime.utcnow()
     datestamp= datetime.utcnow().strftime("%Y%m%d")
     filename = "{}".format(timestamp.strftime("%Y%m%d-%H%M%S"))
-    current_working_dir = os.getcwd()
 
     download_Picture(url, authen, current_working_dir, filename)
     download_time = datetime.utcnow()
-    #START THREAD
+    #START analysis THREAD
     Analysis_pool.acquire()
     thread = AnalysisThread(current_working_dir, datestamp, filename)
     thread.start()
     Analysis_threads.append(thread)
-    return redirect("http://10.0.0.216", code=302)
 
 
 def download_Picture(url, authen, file_location, filename):
+    print("download_Picture")
     #bug : authen is not working correctly, for now hard coded
     logging.info("download_Picture({} {} {})".format(url, file_location, filename))
 
@@ -89,10 +150,16 @@ def download_Picture(url, authen, file_location, filename):
     print("response code : {}".format(rawPictureData.status_code))
     target_file = "{}/data/rawData/{}.jpg".format(file_location, filename)
     if rawPictureData.status_code == 200:
+        
+
         print("valid response code, now saving the image")
         with open(target_file, 'wb') as f:
             f.write(rawPictureData.content)
 
+
+
+autoTimer = AutoAnalysisTimer(6, getImage)
+DEBUG = False
 if __name__ == '__main__':
     app.debug = True
     app.run(host="0.0.0.0", port=80)
