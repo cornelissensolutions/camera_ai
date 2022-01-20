@@ -24,10 +24,13 @@ class CIPS:
         return self.DEBUG   
 
     def run(self,cameraObject):       
-        print("analyze")
         timestamp = datetime.utcnow()
         stream = self.get_ImageStream(cameraObject ,timestamp)
+        lap = datetime.utcnow()
+        getStream = round((lap-timestamp).total_seconds(),2)
         self._analyse_image_stream(cameraObject, stream, timestamp)
+        analyzed = round((datetime.utcnow() - lap).total_seconds(),2)
+        print("Run duration : {} + {}".format(getStream, analyzed))
 
     def get_ImageStream(self, camera, timeStamp):
         filename = "{}_{}".format(camera.name, timeStamp.strftime("%Y%m%d-%H%M%S"))
@@ -49,31 +52,34 @@ class CIPS:
         target_file_folder = "{}/data/analyzed/{}/".format(self.current_working_dir, timeStamp.strftime("%Y%m%d"))
 
         response = requests.post("http://10.0.66.4:123/v1/vision/detection", files={"image":img}, data={"api_key":""}).json()
-        image = Image.open(BytesIO(img)).convert("RGB") 
-        safeFile = False
-        i=0
-        draw = ImageDraw.Draw(image) #renamed image_org to image
-        for item in response["predictions"]:
-            label = item["label"]
-            y_max = int(item["y_max"])
-            y_min = int(item["y_min"])
-            x_max = int(item["x_max"])
-            x_min = int(item["x_min"])
-            confidence = str(int(item["confidence"] * 100))
-            if label not in camera.excludelist:
-                safeFile = True
-                cropped = image.crop((x_min, y_min, x_max, y_max))
-                print("saving analyzed object")
-                filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
-                cropped.save("{}/{}.jpg".format(target_file_folder, filename))
+        if response["success"]:
+            image = Image.open(BytesIO(img)).convert("RGB") 
+            safeFile = False
+            i=0
+            draw = ImageDraw.Draw(image) #renamed image_org to image
+            for item in response["predictions"]:
+                label = item["label"]
+                y_max = int(item["y_max"])
+                y_min = int(item["y_min"])
+                x_max = int(item["x_max"])
+                x_min = int(item["x_min"])
+                confidence = str(int(item["confidence"] * 100))
+                if label not in camera.excludelist:
+                    safeFile = True
+                    cropped = image.crop((x_min, y_min, x_max, y_max))
+                    print("saving analyzed object")
+                    filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
+                    cropped.save("{}/{}.jpg".format(target_file_folder, filename))
 
-            draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="Black" )
-            text = label + " - " + confidence + "%"
-            draw.text((x_min+20, y_min+20), text)
-            i += 1
+                draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="Black" )
+                text = label + " - " + confidence + "%"
+                draw.text((x_min+20, y_min+20), text)
+                i += 1
 
 
-        if safeFile:
-            print("only saving image once something of interest is found")
-            safeTarget = "{}/{}".format(target_file_folder, parent_filename)
-            image.save(safeTarget,"JPEG")
+            if safeFile:
+                print("only saving image once something of interest is found")
+                safeTarget = "{}/{}".format(target_file_folder, parent_filename)
+                image.save(safeTarget,"JPEG")
+        else:
+            print(response["error"])

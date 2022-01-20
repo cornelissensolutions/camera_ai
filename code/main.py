@@ -1,18 +1,20 @@
+from crypt import methods
 from flask import Flask, render_template, request, abort, send_file, redirect
+from werkzeug.utils import secure_filename
 
 from flask.helpers import total_seconds
-import requests
 from requests.auth import HTTPDigestAuth
 import os, sys
-import os.path, glob
+import os.path
 from datetime import datetime, time
 
 import logging, logging.handlers
 import syslog
 import threading
-from threading import Thread, Timer, Event
+from threading import Timer
 import CIPS_Analyzer
 import CIPS_Camera
+
 class AnalysisThread(threading.Thread):
     def __init__(self, cameraObject):
         threading.Thread.__init__(self)
@@ -75,15 +77,22 @@ Analysis_threads = []
 Analysis_pool = threading.BoundedSemaphore(value=10)
 current_working_dir = os.getcwd()
 
+UPLOAD_FOLDER = '{}/config'.format(current_working_dir)
+ALLOWED_EXTENSIONS = {'txt', 'ini'}
+
 app = Flask(__name__, template_folder='templates')
 CIPS = CIPS_Analyzer.CIPS()
-CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted plant"] )
 
+CAMERAS = []
 
 
 @app.route('/')
 def hello_world():
-    return render_template("main.html",threads=len(Analysis_threads), timer = autoTimer.status(), debug = CIPS.debugStatus())
+    return render_template("main.html", threads=len(Analysis_threads), 
+                                        cameras = CAMERAS,
+                                        timerStatus = autoTimer.status(), 
+                                        timerValue=autoTimer.timer, 
+                                        debugStatus = CIPS.debugStatus())
 
 @app.route('/files', defaults={'req_path': ''})
 @app.route('/files/', defaults={'req_path': ''})
@@ -124,12 +133,13 @@ def webStopTimer():
     autoTimer.cancel()
     return redirect('/')
 
-# @app.route("updateTimer", method=['POST'])
-# def updateTimer():
-#     i = request.form["newTimerValue"]
-#     print(i)
-#     autoTimer.updateTimerFreq(i)
-#     return redirect('/')
+@app.route("/updateTimer", methods=["GET", "POST"])
+def updateTimer():
+    print("update time")
+    newTimerValue = request.form.get("newTimerValue")
+    autoTimer.updateTimerFreq(int(newTimerValue))
+    return redirect('/')
+
 @app.route("/stopServer")
 def stopWebServer():
     shutdown_server()
@@ -145,8 +155,31 @@ def disableDebug():
     CIPS.disableDebug()
     return redirect('/')
 
+@app.route("/uploadCameraConfig", methods=["POST"])
+def uploadCamera():
+    print("upload camera")
+    dataFile = request.files
+    print(dataFile)
+    if 'file' not in request.files:
+        print('No file part')
+        return "NO FILE PART <a href='/'> RETURN HOME</a>"
+    file = request.files['file']
+    # If the user does not select a file, the browser submits an
+    # empty file without a filename.
+    if file.filename == '':
+        print('No selected file')
+        return "NO FILE SELECTED <a href='/'> RETURN HOME</a>"
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    return redirect('/')
 
-
+@app.route("/loadCameraFromConfig")
+def loadCameraFromConfig():
+    #TODO add check if camera is already added 
+    CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted plant"] )
+    CAMERAS.append(CAM)
+    return redirect('/')
 
 def shutdown_server():
     func = request.environ.get('werkzeug.server.shutdown')
@@ -154,14 +187,18 @@ def shutdown_server():
         raise RuntimeError('Not running with the Werkzeug Server')
     func()     
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def getImageStream():
     print("getImageStream")
-    #START analysis THREAD
-    Analysis_pool.acquire()
-    thread = AnalysisThread(CAM)
-    thread.start()
-    Analysis_threads.append(thread)
+    #START analysis THREAD per loaded camera
+    for CAM in CAMERAS:
+        Analysis_pool.acquire()
+        thread = AnalysisThread(CAM)
+        thread.start()
+        Analysis_threads.append(thread)
 
 
 
@@ -171,5 +208,6 @@ autoTimer = AutoAnalysisTimer(5, getImageStream)
 
 if __name__ == '__main__':
     app.debug = True
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.run(host="0.0.0.0", port=80)
   

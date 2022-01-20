@@ -1,15 +1,30 @@
+<!doctype html>
 <meta http-equiv='refresh' content='10'>
 <h1>HELLO WORLD</h1>
 <p>Cornelissen Image Processing System</p>
 <br>{{ threads }} working Threads 
 <br><a href='/trigger'> Trigger Image collection</a>
-<br><a href='files'>files </a>
+<br><a href='files'>files</a>
 <br>
-<br>TIMER : {{ timer }} - <a href="/startTimer">Start auto timer</a> / <a href="/stopTimer">Stop auto timer</a>
-<form action="updateTimer" method="POST">
-    <p>seconds <input type = "text" name = "newTimerValue"/></p>
-    <p><input type="submit" value="submit"/></p>
+<br>
+<h2>CAMERA</h2>
+{% for camera in cameras %}
+<li>
+    {{ camera.name }}
+    <!-- <a href="{{ () }}">DELETE </a> -->
+</li>
+{% endfor %}
+<a href="/loadCameraFromConfig">load Camera's</a>
+<form method="post" enctype="multipart/form-data" action="uploadCameraConfig">
+  <input type=file name=file>
+  <input type=submit value=Upload>
 </form>
-<br>DEBUG : {{ debug }} - <a href="/enableDebug">enable</a> / <a href="/disableDebug">disable</a>
+<h2>TIMER</h2>
+<br>status : {{ timerStatus }} - <a href="/startTimer">Start</a> / <a href="/stopTimer">Stop</a>
+<form action="updateTimer" method="POST">
+    <p>seconds <input type = "text" name = "newTimerValue" value='{{ timerValue }}'/><input type="submit" value="update"/></p>
+</form>
+<h2>DEBUG</h2>
+<br>status : {{ debugStatus }} - <a href="/enableDebug">enable</a> / <a href="/disableDebug">disable</a>
 <br><br><br>
 <a href="/stopServer">STOP</a>
