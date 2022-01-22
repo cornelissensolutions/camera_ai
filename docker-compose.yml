@@ -11,7 +11,8 @@ services:
     ports:
       - 82:80
     volumes:
-      - ./data_home_app_data:/home/app/data
+      # - ./data_home_app_data:/home/app/data
+      - CIPS-volume:/home/app/data
     restart: unless-stopped
 
   visiondetection:
@@ -24,4 +25,5 @@ services:
       - ./data:/datastore
     restart: unless-stopped
 
-    
+volumes:
+  CIPS-volume:    

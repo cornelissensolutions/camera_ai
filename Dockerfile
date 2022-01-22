@@ -11,6 +11,7 @@ RUN pip install -r Requirements.txt
 RUN mkdir -p /home/app
 RUN mkdir -p /home/app/data
 RUN mkdir -p /home/app/config
+RUN mkdir -p /home/app/templates
 WORKDIR /home/app/
 
 COPY code /home/app

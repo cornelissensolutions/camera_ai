@@ -1,9 +1,12 @@
 save images based on timezone 
-support for multiple cameras
+support for multiple cameras with different timers
 enable / disable saving of cropped images
 text in different color then background color
 load camera's ini files into web ui
 add exclude area on camera feed
 add person too long in view recording
 add saving of videostream instead of images
-add changing timer frequency via web ui
+add changing timer frequency via web ui without interference of loading the frontpage
+automatic changing timer frequency based on throughput
+add logging viewer
+getcamera feed from camera class instead of analysis class

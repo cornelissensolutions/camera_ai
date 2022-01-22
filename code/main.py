@@ -1,5 +1,5 @@
 from crypt import methods
-from flask import Flask, render_template, request, abort, send_file, redirect
+from flask import Flask, render_template, request, abort, send_file, redirect, send_from_directory, Response
 from werkzeug.utils import secure_filename
 
 from flask.helpers import total_seconds
@@ -21,12 +21,13 @@ class AnalysisThread(threading.Thread):
         self.camera = cameraObject
 
     def run(self):
+        logging.debug("run")
         start_time = datetime.utcnow()
         CIPS.run(self.camera)
         Analysis_pool.release()
         Analysis_threads.remove(self)
         end_time = datetime.utcnow()
-        print("Thread duration: {}".format((end_time-start_time).total_seconds()))
+        logging.debug("Thread duration: {}".format((end_time-start_time).total_seconds()))
 
 class AutoAnalysisTimer():
     def __init__(self, timer, target):
@@ -37,41 +38,49 @@ class AutoAnalysisTimer():
         self.thread = None
 
     def _handle_target(self):
-        print("_handle_target")
+        logging.debug("_handle_target")
         self.is_running = True
         self.target()
         self.is_running = False
         self._start_timer()
 
     def _start_timer(self):
+        logging.debug("_start_timer")
         if self._should_continue:
             self.thread = Timer(self.timer, self._handle_target)
             self.thread.start()
 
     def start(self):
+        logging.debug("start")
         if not self._should_continue and not self.is_running:
             self._should_continue = True
             self._start_timer()
         else:
-            print("Timer already started or running, please wait if you're restarting.")
+            logging.debug("Timer already started or running, please wait if you're restarting.")
 
     def cancel(self):
+        logging.debug("cancel")
         if self.thread is not None:
             self._should_continue = False # Just in case thread is running and cancel fails.
             self.thread.cancel()
         else:
-            print("Timer never started or failed to initialize.")
+            logging.debug("Timer never started or failed to initialize.")
 
     def updateTimerFreq(self,newTime):
+        logging.debug("updateTimerFreq")
         self.cancel()
         self.timer = newTime
         self.start()
 
     def status(self):
+        logging.debug("status")
         return self._should_continue
 
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler('camera.log', 'w', 'utf-8')
+root_logger.addHandler(handler)
 
-syslog.openlog(sys.argv[0])
 threadlock = threading.Lock
 Analysis_threads = []
 Analysis_pool = threading.BoundedSemaphore(value=10)
@@ -94,11 +103,23 @@ def hello_world():
                                         timerValue=autoTimer.timer, 
                                         debugStatus = CIPS.debugStatus())
 
+@app.route('/downloadLog')
+def downloadLog():
+    try:
+        return send_from_directory(os.getcwd(), "camera.log", as_attachment=True)
+    except FileNotFoundError:
+        abort(404)
+@app.route('/viewLog')
+def viewLog():
+    with open("camera.log", "r") as f:
+        content = f.read()
+    return Response(content, mimetype='text/plain') 
+    
 @app.route('/files', defaults={'req_path': ''})
 @app.route('/files/', defaults={'req_path': ''})
 @app.route('/files/<path:req_path>')
 def dir_listing(req_path):
-    print("dir_listing")
+    logging.debug("dir_listing") 
     BASE_DIR = '{}/data'.format(os.getcwd())
 
     # Joining the base and the requested path
@@ -119,39 +140,47 @@ def dir_listing(req_path):
     return render_template(template, files=files)
 
 @app.route("/trigger")
-def webtrigger():
+def trigger():
+    logging.debug("/trigger")
     getImageStream()
     return redirect('/')
 
 @app.route("/startTimer")
-def webStartTimer():
+def startTimer():
+    logging.debug("/startTimer")
+
     autoTimer.start()
     return redirect('/')
 
 @app.route("/stopTimer")
-def webStopTimer():
+def stopTimer():
+    logging.debug("/stopTimer")
     autoTimer.cancel()
     return redirect('/')
 
 @app.route("/updateTimer", methods=["GET", "POST"])
 def updateTimer():
+    logging.debug("updateTimer") 
     print("update time")
     newTimerValue = request.form.get("newTimerValue")
     autoTimer.updateTimerFreq(int(newTimerValue))
     return redirect('/')
 
 @app.route("/stopServer")
-def stopWebServer():
+def stopServer():
+    logging.debug("stopServer") 
     shutdown_server()
     return "server shutting down"
 
 @app.route("/enableDebug")
 def enableDebug():
+    logging.debug("enableDebug") 
     CIPS.enableDebug()
     return redirect('/')
     
 @app.route("/disableDebug")
 def disableDebug():
+    logging.debug("disableDebug") 
     CIPS.disableDebug()
     return redirect('/')
 
@@ -176,12 +205,14 @@ def uploadCamera():
 
 @app.route("/loadCameraFromConfig")
 def loadCameraFromConfig():
+    logging.debug("loadCameraFromConfig") 
     #TODO add check if camera is already added 
     CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted plant"] )
     CAMERAS.append(CAM)
     return redirect('/')
 
 def shutdown_server():
+    logging.debug("shutdown_server") 
     func = request.environ.get('werkzeug.server.shutdown')
     if func is None:
         raise RuntimeError('Not running with the Werkzeug Server')
@@ -192,17 +223,13 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def getImageStream():
-    print("getImageStream")
+    logging.debug("getImageStream") 
     #START analysis THREAD per loaded camera
     for CAM in CAMERAS:
         Analysis_pool.acquire()
         thread = AnalysisThread(CAM)
         thread.start()
         Analysis_threads.append(thread)
-
-
-
-
 
 autoTimer = AutoAnalysisTimer(5, getImageStream)
 
