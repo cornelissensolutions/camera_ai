@@ -18,4 +18,6 @@ add changing timer frequency via web ui without interference of loading the fron
 automatic changing timer frequency based on throughput
 getcamera feed from camera class instead of analysis class
 
+delete raw files older then xx days
+
 

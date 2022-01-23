@@ -1,4 +1,5 @@
 from crypt import methods
+from importlib.metadata import files
 from flask import Flask, render_template, request, abort, send_file, redirect, send_from_directory, Response
 from werkzeug.utils import secure_filename
 
@@ -103,7 +104,9 @@ def hello_world():
                                         cameras = CAMERAS,
                                         timerStatus = autoTimer.status(), 
                                         timerValue=autoTimer.timer, 
-                                        debugStatus = CIPS.debugStatus())
+                                        debugStatus = CIPS.debugStatus(),
+                                        endpointURL = CIPS.ANALYZER.url
+                                        )
 
 @app.route('/downloadLog')
 def downloadLog():
@@ -186,6 +189,13 @@ def disableDebug():
     CIPS.disableDebug()
     return redirect('/')
 
+@app.route("/updateEndpoint", methods=["POST"])
+def updateEndpoint():
+    logging.debug("updateEndpoint")
+    newEndpoint = request.form.get("newEndPointURL")
+    CIPS.updateEndpointURL(newEndpoint)
+    return redirect('/')
+
 @app.route("/uploadCameraConfig", methods=["POST"])
 def uploadCamera():
     print("upload camera")
@@ -211,7 +221,10 @@ def loadCameraFromConfig():
     #TODO add check if camera is already added 
     CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted plant"] )
     CAMERAS.append(CAM)
+    CIPS.get_ImageStream(CAM, datetime.utcnow())
     return redirect('/')
+
+
 
 def shutdown_server():
     logging.debug("shutdown_server") 
