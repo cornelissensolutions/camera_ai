@@ -219,7 +219,7 @@ def loadCameraFromConfig():
     #TODO add check if camera is already added 
     CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted plant"] )
     CAMERAS.append(CAM)
-    CIPS.get_ImageStream(CAM, datetime.utcnow())
+    CIPS.get_ImageStream(CAM)
     return redirect('/')
 
 

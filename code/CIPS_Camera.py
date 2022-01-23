@@ -21,4 +21,7 @@ class CIPS_Camera:
             logging.error("Camera connection error")
             print("CONNECTION ERROR")
             return False
+        except:
+            logging.error("ERROR retrieving data")
+            return False
         return response

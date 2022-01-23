@@ -11,12 +11,28 @@ class DEEPSTACK:
     def __init__(self, URL=""):
         self.url = URL
     
+    """
+        Analyze the given image on certain predictions
+    """
     def analyze(self, img):
         response = requests.post(self.url, files={"image":img}, data={"api_key":""}).json()
         return response
     
+    """
+        Update Deepstack URL to point to another server
+    """
     def updateURL(self, url):
         self.url = url
+
+
+class NOTIFIER:
+    def __init__(self,url):
+        logging.debug("init NOTIFIER")
+        #https://core.telegram.org/bots/api#sendmessage
+        self.url = url
+
+    def message(self, text):
+        requests.get(self.url)
 
 class CIPS:
     DEBUG = False
@@ -46,16 +62,25 @@ class CIPS:
         self.ANALYZER.updateURL(url)
         return self.ANALYZER.url
 
+    """
+        Is triggered by thread to gather image feed and performs analasis 
+    """
     def run(self,cameraObject):
         logging.debug("CIPS thread run()")
         timestamp = self._current_timeStamp()
         
-        stream = self.get_ImageStream(cameraObject ,timestamp)
+        stream = self.get_ImageStream(cameraObject)
+        filename = "{}_{}".format(cameraObject.name, timestamp.strftime("%Y%m%d-%H%M%S"))
+        target_RAW_file_folder = "{}/data/rawData".format(self.current_working_dir)
+        if self.SAFE_RAW_FILES:
+            logging.debug("SAFE RAW FILES mode is on, saving camera response to RawData")
+            self._safe_image(stream, target_RAW_file_folder, filename)
+
         streamTime = self._current_timeStamp()
         getStreamDuration = round((streamTime-timestamp).total_seconds(),2)
 
         if stream != False:
-            logging.debug("stream result is valid, continue to analyze image")
+            logging.debug("CIPS thread run got image content, continue to analyze image")
             self._analyse_image_stream(cameraObject, stream, timestamp)
         finishedTime = self._current_timeStamp()
 
@@ -63,35 +88,22 @@ class CIPS:
         print("Run duration : {} + {}".format(getStreamDuration, analyzeDuration))
         logging.debug("Run duration : {} + {}".format(getStreamDuration, analyzeDuration))
 
-    def get_ImageStream(self, camera, timeStamp):
+    """
+        Get the image stream from a given camera feed. and saves it to latest  
+        params: 
+        camera      Camera class object
+        return  img object
+    """
+    def get_ImageStream(self, camera):
         logging.debug("get_ImageStream")
-        filename = "{}_{}".format(camera.name, timeStamp.strftime("%Y%m%d-%H%M%S"))
-        target_RAW_file_folder = "{}/data/rawData".format(self.current_working_dir)
-        target_RAW_file_location = "{}/{}.jpg".format(target_RAW_file_folder, filename)
-        if not os.path.exists(target_RAW_file_folder):
-            logging.debug("RawFileFolder does not exist, create it ")
-            os.makedirs(target_RAW_file_folder)
-        if not os.path.exists(target_RAW_file_folder):
-            logging.error("ERROR creating raw file folder")
-
 
         response = camera.stream()
         logging.debug("response status code : {}".format(response.status_code))
         if response.status_code == 200:
-            logging.debug("get content from stream ")
             img = response.content
-            if self.SAFE_RAW_FILES:
-                logging.debug("SAFE RAW FILES mode is on, saving camera response to RawData")
-                try:
-                    with open(target_RAW_file_location, 'wb') as f:
-                        f.write(response.content)
-                except:
-                    logging.error("FAILED to safe RAW file")
-                    return False
-
             try:
-                with open("data/achterdeur.jpg", "wb") as latest:
-                    latest.write(response.content)
+                with open("data/{}.jpg".format(camera.name), "wb") as latestImage:
+                    latestImage.write(img)
             except:
                 logging.error("FAILED saving latest camera file")
             return img
@@ -99,6 +111,13 @@ class CIPS:
             logging.error("No valid response code")
             return False
     
+    """
+        _analyse_image_stream
+        params:
+        camera      camera object for exclude list settings
+        img         img feed
+        timeStamp   for saving the files
+    """
     def _analyse_image_stream(self,camera, img, timeStamp):
         logging.debug("_analyse_image_stream")
         print("_analyse_image_stream")
@@ -143,15 +162,28 @@ class CIPS:
         else:
             print(response["error"])
 
+    """
+        _safe_image
+        params:
+            image
+            folder
+            filename        filename to save
+    """
     def _safe_image(self, image, folder, filename):
+        logging.debug("_safe_image(img, {}, {}".format(folder, filename))
         if not os.path.exists(folder):
+            logging.debug("need to create target folder")
             os.makedirs(folder)
         try:
-            image.save(folder, filename)
+            with open("{}/{}.jpg".format(folder, filename), "wb") as latest:
+                latest.write(image)
+            #image.save(folder, filename)
         except:
             logging.error("Failed saving file {} to {}".format(filename, folder))
 
-        return 1
+    """
+        _current_timeStamp
+    """
     def _current_timeStamp(self):
         #CHANGE FOR TIMEZONE    
         return datetime.utcnow()
