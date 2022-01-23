@@ -10,6 +10,8 @@ RUN pip install -r Requirements.txt
 
 RUN mkdir -p /home/app
 RUN mkdir -p /home/app/data
+RUN mkdir -p /home/app/data/rawData
+RUN mkdir -p /home/app/data/analyzed
 RUN mkdir -p /home/app/config
 RUN mkdir -p /home/app/templates
 WORKDIR /home/app/
