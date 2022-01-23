@@ -31,14 +31,19 @@ class CIPS:
         return self.DEBUG   
 
     def run(self,cameraObject):    
-        logging.debug("run()")   
-        timestamp = datetime.utcnow()
+        logging.debug("CIPS thread run()")   
+        timestamp = self._current_timeStamp()
+        
         stream = self.get_ImageStream(cameraObject ,timestamp)
-        lap = datetime.utcnow()
-        getStream = round((lap-timestamp).total_seconds(),2)
+        streamTime = self._current_timeStamp()
+        getStreamDuration = round((streamTime-timestamp).total_seconds(),2)
+
         self._analyse_image_stream(cameraObject, stream, timestamp)
-        analyzed = round((datetime.utcnow() - lap).total_seconds(),2)
-        print("Run duration : {} + {}".format(getStream, analyzed))
+        finishedTime = self._current_timeStamp()
+
+        analyzeDuration = round((finishedTime - streamTime).total_seconds(),2)
+        print("Run duration : {} + {}".format(getStreamDuration, analyzeDuration))
+        logging.debug("Run duration : {} + {}".format(getStreamDuration, analyzeDuration))
 
     def get_ImageStream(self, camera, timeStamp):
         logging.debug("get_ImageStream")  
@@ -66,7 +71,9 @@ class CIPS:
         target_file_folder = "{}/data/analyzed/{}/".format(self.current_working_dir, timeStamp.strftime("%Y%m%d"))
 
         response = requests.post("http://10.0.66.4:123/v1/vision/detection", files={"image":img}, data={"api_key":""}).json()
+        logging.debug("DEEPSTACK status : {}".format(response["success"]))
         if response["success"]:
+            logging.debug("DEEPSTACK responses : {}".format(response["predictions"]))
             image = Image.open(BytesIO(img)).convert("RGB") 
             safeFile = False
             i=0
@@ -97,3 +104,7 @@ class CIPS:
                 image.save(safeTarget,"JPEG")
         else:
             print(response["error"])
+    
+    def _current_timeStamp(self):
+        #CHANGE FOR TIMEZONE    
+        return datetime.utcnow()

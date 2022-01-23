@@ -78,8 +78,10 @@ class AutoAnalysisTimer():
 
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler('camera.log', 'w', 'utf-8')
-root_logger.addHandler(handler)
+fileHandler = logging.FileHandler('camera.log', 'w', 'utf-8')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s ::  \t%(message)s')
+fileHandler.setFormatter(formatter)
+root_logger.addHandler(fileHandler)
 
 threadlock = threading.Lock
 Analysis_threads = []
@@ -114,7 +116,7 @@ def viewLog():
     with open("camera.log", "r") as f:
         content = f.read()
     return Response(content, mimetype='text/plain') 
-    
+
 @app.route('/files', defaults={'req_path': ''})
 @app.route('/files/', defaults={'req_path': ''})
 @app.route('/files/<path:req_path>')
