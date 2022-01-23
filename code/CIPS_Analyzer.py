@@ -55,6 +55,7 @@ class CIPS:
         getStreamDuration = round((streamTime-timestamp).total_seconds(),2)
 
         if stream != False:
+            logging.debug("stream result is valid, continue to analyze image")
             self._analyse_image_stream(cameraObject, stream, timestamp)
         finishedTime = self._current_timeStamp()
 
@@ -68,11 +69,16 @@ class CIPS:
         target_RAW_file_folder = "{}/data/rawData".format(self.current_working_dir)
         target_RAW_file_location = "{}/{}.jpg".format(target_RAW_file_folder, filename)
         if not os.path.exists(target_RAW_file_folder):
+            logging.debug("RawFileFolder does not exist, create it ")
             os.makedirs(target_RAW_file_folder)
+        if not os.path.exists(target_RAW_file_folder):
+            logging.error("ERROR creating raw file folder")
+
 
         response = camera.stream()
-
+        logging.debug("response status code : {}".format(response.status_code))
         if response.status_code == 200:
+            logging.debug("get content from stream ")
             img = response.content
             if self.SAFE_RAW_FILES:
                 logging.debug("SAFE RAW FILES mode is on, saving camera response to RawData")
@@ -90,6 +96,7 @@ class CIPS:
                 logging.error("FAILED saving latest camera file")
             return img
         else:
+            logging.error("No valid response code")
             return False
     
     def _analyse_image_stream(self,camera, img, timeStamp):

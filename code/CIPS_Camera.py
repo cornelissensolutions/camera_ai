@@ -13,7 +13,9 @@ class CIPS_Camera:
         return requests.get(self.url, auth=self.auth).status_code
     
     def stream(self):
+        logging.debug("stream")
         try:
+            logging.debug("request {} ".format(self.url))
             response = requests.get(self.url, auth=self.auth)
         except ConnectionError:
             logging.error("Camera connection error")
