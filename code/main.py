@@ -1,5 +1,3 @@
-from crypt import methods
-from importlib.metadata import files
 from flask import Flask, render_template, request, abort, send_file, redirect, send_from_directory, Response
 from werkzeug.utils import secure_filename
 
