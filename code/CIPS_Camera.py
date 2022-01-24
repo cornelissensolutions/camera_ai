@@ -2,13 +2,13 @@ import requests
 import logging
 
 class CIPS_Camera:
-    def __init__(self, name, url, auth, exclude=[]):
+    def __init__(self, name, url, auth, exclude=[], include=[]):
         print("init CIPS Camera")
         self.name = name
         self.url = url
         self.auth = auth
-        self.excludelist = exclude
-
+        self.excludeList = exclude
+        self.includeList = include
     def status(self):
         return requests.get(self.url, auth=self.auth).status_code
     

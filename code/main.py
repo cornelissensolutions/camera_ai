@@ -1,14 +1,15 @@
+import configparser
 from flask import Flask, render_template, request, abort, send_file, redirect, send_from_directory, Response
 from werkzeug.utils import secure_filename
 
-from flask.helpers import total_seconds
+#from flask.helpers import total_seconds
 from requests.auth import HTTPDigestAuth
 import os, sys
 import os.path
 from datetime import datetime, time
 
 import logging, logging.handlers
-import syslog
+#import syslog
 import threading
 from threading import Timer
 import CIPS_Analyzer
@@ -87,7 +88,7 @@ Analysis_threads = []
 Analysis_pool = threading.BoundedSemaphore(value=10)
 current_working_dir = os.getcwd()
 
-UPLOAD_FOLDER = '{}/config'.format(current_working_dir)
+CONFIG_FOLDER = '{}/config'.format(current_working_dir)
 ALLOWED_EXTENSIONS = {'txt', 'ini'}
 
 app = Flask(__name__, template_folder='templates')
@@ -210,20 +211,39 @@ def uploadCamera():
         return "NO FILE SELECTED <a href='/'> RETURN HOME</a>"
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        file.save(os.path.join(app.config['CONFIG_FOLDER'], "camera", filename))
+
     return redirect('/')
 
 @app.route("/loadCameraFromConfig")
 def loadCameraFromConfig():
     logging.debug("loadCameraFromConfig") 
+    #load all ini files in config/camera
+    for file in os.listdir(os.path.join(app.config["CONFIG_FOLDER"],"camera")):
+        print(file)
+        filelocation = os.path.join(app.config["CONFIG_FOLDER"],"camera",file)
+        loadConfigFile(filelocation)
     #TODO add check if camera is already added 
-    CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted plant"] )
+    CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted plant", "motorcycle", "bird", "sports_ball"] )
     CAMERAS.append(CAM)
     CIPS.get_ImageStream(CAM)
     return redirect('/')
 
+def loadConfigFile(filelocation):
+    logging.debug("loadConfigFile({})".format(filelocation))
+    config = configparser.ConfigParser()
+    config.read(filelocation)
 
+    url = config["CAMERA"]["URL"]
+    
+    print(url)
 
+def loadCamera(object):
+    return 1
+
+"""
+    Shutdown the webserver in a graceful manner
+"""
 def shutdown_server():
     logging.debug("shutdown_server") 
     func = request.environ.get('werkzeug.server.shutdown')
@@ -231,10 +251,16 @@ def shutdown_server():
         raise RuntimeError('Not running with the Werkzeug Server')
     func()     
 
+"""
+    returns if file extension is valid
+"""
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+"""
+    triggers the analysis thread per camera registered
+"""
 def getImageStream():
     logging.debug("getImageStream") 
     #START analysis THREAD per loaded camera
@@ -248,6 +274,6 @@ autoTimer = AutoAnalysisTimer(5, getImageStream)
 
 if __name__ == '__main__':
     app.debug = True
-    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    app.config['CONFIG_FOLDER'] = CONFIG_FOLDER
     app.run(host="0.0.0.0", port=80)
   

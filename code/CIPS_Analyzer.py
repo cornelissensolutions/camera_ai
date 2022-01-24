@@ -37,6 +37,7 @@ class NOTIFIER:
 class CIPS:
     DEBUG = False
     SAFE_RAW_FILES = False
+    SAFE_CROPPED_FILES = False
     current_working_dir = os.getcwd()
 
     def __init__(self):
@@ -48,11 +49,13 @@ class CIPS:
         logging.debug("enableDebug")
         self.DEBUG = True
         self.SAFE_RAW_FILES = True
+        self.SAFE_CROPPED_FILES = True
 
     def disableDebug(self):
         logging.debug("disableDebug")
         self.DEBUG = False
         self.SAFE_RAW_FILES = False
+        self.SAFE_CROPPED_FILES = False
 
     def debugStatus(self):
         logging.debug("debugStatus")
@@ -98,19 +101,22 @@ class CIPS:
         logging.debug("get_ImageStream")
 
         response = camera.stream()
-        logging.debug("response status code : {}".format(response.status_code))
-        if response.status_code == 200:
-            img = response.content
-            try:
-                with open("data/{}.jpg".format(camera.name), "wb") as latestImage:
-                    latestImage.write(img)
-            except:
-                logging.error("FAILED saving latest camera file")
-            return img
+        if response:
+            logging.debug("response status code : {}".format(response.status_code))
+            if response.status_code == 200:
+                img = response.content
+                try:
+                    with open("data/{}.jpg".format(camera.name), "wb") as latestImage:
+                        latestImage.write(img)
+                except:
+                    logging.error("FAILED saving latest camera file")
+                return img
+            else:
+                logging.error("No valid response code")
+                return False
         else:
-            logging.error("No valid response code")
+            logging.error("not retrieving data")
             return False
-    
     """
         _analyse_image_stream
         params:
@@ -126,7 +132,6 @@ class CIPS:
 
         #TODO: add try except
         response = self.ANALYZER.analyze(img)
-        #response = requests.post("http://10.0.66.4:123/v1/vision/detection", files={"image":img}, data={"api_key":""}).json()
         logging.debug("DEEPSTACK status : {}".format(response["success"]))
         if response["success"]:
             logging.debug("DEEPSTACK responses : {}".format(response["predictions"]))
@@ -141,14 +146,15 @@ class CIPS:
                 x_max = int(item["x_max"])
                 x_min = int(item["x_min"])
                 confidence = str(int(item["confidence"] * 100))
-                if label not in camera.excludelist:
+                if label not in camera.excludeList:
                     safeFile = True
+                if self.SAFE_CROPPED_FILES:
                     cropped = image.crop((x_min, y_min, x_max, y_max))
-                    print("saving analyzed object")
+                    print("saving analyzed object : {}".format(label))
                     filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
+                    logging.debug("Saving cropped image {} to {}".format(filename, target_file_folder))
+                    cropped.save("{}/{}".format(target_file_folder, filename))
                     #self._safe_image(cropped, target_file_folder, filename)
-                    cropped.save("{}/{}.jpg".format(target_file_folder, filename))
-                    self._safe_image(cropped, target_file_folder, filename)
 
                 draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="Black" )
                 text = label + " - " + confidence + "%"
@@ -158,7 +164,7 @@ class CIPS:
                 print("only saving image once something of interest is found")
                 safeTarget = "{}/{}".format(target_file_folder, parent_filename)
                 image.save(safeTarget,"JPEG")
-                self._safe_image(image, target_file_folder, parent_filename)
+                #self._safe_image(image, target_file_folder, parent_filename)
         else:
             print(response["error"])
 

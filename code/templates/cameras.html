@@ -1,0 +1,16 @@
+
+<!doctype html>
+<title>Path: {{ request.path }}</title>
+<h1>{{ request.path }}</h1>
+
+<ul>
+    <li>
+        <a href="..">..</a> 
+    </li>
+    {% for camera in cameras %}
+    <li>
+        {{ camera.name }}
+        
+    </li>
+    {% endfor %}
+</ul>
