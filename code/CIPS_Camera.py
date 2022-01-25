@@ -2,21 +2,29 @@ import requests
 import logging
 
 class CIPS_Camera:
-    def __init__(self, name, url, auth, exclude=[], include=[]):
+    def __init__(self, name, url, auth, brand="random", exclude=[], include=[]):
+        logging.info("CIPS_Camera init : {}".format(name))
         print("init CIPS Camera")
         self.name = name
         self.url = url
         self.auth = auth
+        self.brand = brand
         self.excludeList = exclude
         self.includeList = include
-    def status(self):
-        return requests.get(self.url, auth=self.auth).status_code
-    
+
+    """
+        Returns the imaage stream of a camera
+    """
     def stream(self):
         logging.debug("stream")
         try:
             logging.debug("request {} ".format(self.url))
-            response = requests.get(self.url, auth=self.auth)
+            if self.auth != None:
+                logging.debug("stream get auth")
+                response = requests.get(self.url, auth=self.auth)
+            else:
+                logging.debug("stream get")
+                response = requests.get(self.url)
         except ConnectionError:
             logging.error("Camera connection error")
             print("CONNECTION ERROR")

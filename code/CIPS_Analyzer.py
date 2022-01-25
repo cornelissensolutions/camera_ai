@@ -106,6 +106,7 @@ class CIPS:
             if response.status_code == 200:
                 img = response.content
                 try:
+                    logging.debug("saving latest camera image")
                     with open("data/{}.jpg".format(camera.name), "wb") as latestImage:
                         latestImage.write(img)
                 except:
@@ -128,7 +129,7 @@ class CIPS:
         logging.debug("_analyse_image_stream")
         print("_analyse_image_stream")
         parent_filename = "{}_{}-analyzed.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"), camera.name)
-        target_file_folder = "{}/data/analyzed/{}/".format(self.current_working_dir, timeStamp.strftime("%Y%m%d"))
+        target_file_folder = "{}/data/analyzed/{}".format(self.current_working_dir, timeStamp.strftime("%Y%m%d"))
 
         #TODO: add try except
         response = self.ANALYZER.analyze(img)
@@ -163,6 +164,9 @@ class CIPS:
             if safeFile:
                 print("only saving image once something of interest is found")
                 safeTarget = "{}/{}".format(target_file_folder, parent_filename)
+                if not os.path.exists(target_file_folder):
+                    logging.debug("need to create target folder {}".format(target_file_folder))
+                    os.makedirs(target_file_folder)
                 image.save(safeTarget,"JPEG")
                 #self._safe_image(image, target_file_folder, parent_filename)
         else:

@@ -1,8 +1,8 @@
+from asyncio import threads
 import configparser
 from flask import Flask, render_template, request, abort, send_file, redirect, send_from_directory, Response
+from itsdangerous import exc
 from werkzeug.utils import secure_filename
-
-#from flask.helpers import total_seconds
 from requests.auth import HTTPDigestAuth
 import os, sys
 import os.path
@@ -11,23 +11,48 @@ from datetime import datetime, time
 import logging, logging.handlers
 #import syslog
 import threading
-from threading import Timer
+from threading import  Timer
 import CIPS_Analyzer
 import CIPS_Camera
 
+"""
+    seperate thread to load camera's from config
+"""
+class AddCameraFromConfigThread(threading.Thread):
+    def __init__(self, configFile):
+        threading.Thread.__init__(self)
+        self.configFile = configFile
+
+    def run(self):
+        logging.debug("run AddCameraFromConfigThread for {}".format(self.configFile))
+        config = loadConfigFile(self.configFile)
+        #TODO add check if camera is already added 
+        loadCamera(config)
+    
+
+
+"""
+    seperate thread to do all analysis 
+"""
 class AnalysisThread(threading.Thread):
     def __init__(self, cameraObject):
         threading.Thread.__init__(self)
         self.camera = cameraObject
 
     def run(self):
-        logging.debug("run")
+        logging.debug("run AnalysisThread")
         start_time = datetime.utcnow()
         CIPS.run(self.camera)
         Analysis_pool.release()
         Analysis_threads.remove(self)
         end_time = datetime.utcnow()
         logging.debug("Thread duration: {}".format((end_time-start_time).total_seconds()))
+
+    def kill(self):
+        print("kill")
+        #todo does not kill yet
+        Analysis_pool.release()
+        Analysis_threads.remove(self)
 
 class AutoAnalysisTimer():
     def __init__(self, timer, target):
@@ -76,6 +101,8 @@ class AutoAnalysisTimer():
         logging.debug("status")
         return self._should_continue
 
+
+
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
 fileHandler = logging.FileHandler('camera.log', 'w', 'utf-8')
@@ -93,9 +120,7 @@ ALLOWED_EXTENSIONS = {'txt', 'ini'}
 
 app = Flask(__name__, template_folder='templates')
 CIPS = CIPS_Analyzer.CIPS()
-
 CAMERAS = []
-
 
 @app.route('/')
 def hello_world():
@@ -113,6 +138,7 @@ def downloadLog():
         return send_from_directory(os.getcwd(), "camera.log", as_attachment=True)
     except FileNotFoundError:
         abort(404)
+
 @app.route('/viewLog')
 def viewLog():
     with open("camera.log", "r") as f:
@@ -188,6 +214,13 @@ def disableDebug():
     CIPS.disableDebug()
     return redirect('/')
 
+@app.route("/killAllThreads")
+def killAllThreads():
+    logging.debug("killAllThreads")
+    for t in Analysis_threads:
+        t.kill()
+    return redirect('/')
+
 @app.route("/updateEndpoint", methods=["POST"])
 def updateEndpoint():
     logging.debug("updateEndpoint")
@@ -222,24 +255,44 @@ def loadCameraFromConfig():
     for file in os.listdir(os.path.join(app.config["CONFIG_FOLDER"],"camera")):
         print(file)
         filelocation = os.path.join(app.config["CONFIG_FOLDER"],"camera",file)
-        loadConfigFile(filelocation)
-    #TODO add check if camera is already added 
-    CAM = CIPS_Camera.CIPS_Camera("achterdeur", "http://10.0.66.70/Streaming/channels/1/picture", HTTPDigestAuth('test','T3sterer'), ["chair", "bench", "potted plant", "motorcycle", "bird", "sports_ball"] )
-    CAMERAS.append(CAM)
-    CIPS.get_ImageStream(CAM)
+        thread = AddCameraFromConfigThread(filelocation)
+        thread.start()
     return redirect('/')
 
+
+
+"""
+    load config file 
+"""
 def loadConfigFile(filelocation):
     logging.debug("loadConfigFile({})".format(filelocation))
     config = configparser.ConfigParser()
     config.read(filelocation)
+    #TODO validate config settings
+    return config
 
-    url = config["CAMERA"]["URL"]
-    
-    print(url)
-
-def loadCamera(object):
-    return 1
+"""
+    load Camera into camera pool
+"""
+def loadCamera(config):
+    logging.debug("loadCamera")
+    #todo add validator of values
+    name = config["CAMERA"]["name"]
+    ip = config["CAMERA"]["ip"]
+    url = config["CAMERA"]["url"]
+    username = config["CAMERA"]["username"]
+    password = config["CAMERA"]["password"]
+    print(username)
+    brand = config["CAMERA"]["brand"]
+    exclude_objects = config["CAMERA"]["exclude_objects"] 
+    if username != "":
+        logging.debug("add camera with authentication")
+        CAM = CIPS_Camera.CIPS_Camera(name, url, HTTPDigestAuth(username,password), exclude_objects )
+    else:
+        logging.debug("add camera without authentication")
+        CAM = CIPS_Camera.CIPS_Camera(name, url, None, exclude_objects)
+    CAMERAS.append(CAM)
+    CIPS.get_ImageStream(CAM)
 
 """
     Shutdown the webserver in a graceful manner
@@ -250,6 +303,7 @@ def shutdown_server():
     if func is None:
         raise RuntimeError('Not running with the Werkzeug Server')
     func()     
+
 
 """
     returns if file extension is valid
