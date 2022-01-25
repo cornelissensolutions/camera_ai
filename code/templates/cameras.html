@@ -2,15 +2,29 @@
 <!doctype html>
 <title>Path: {{ request.path }}</title>
 <h1>{{ request.path }}</h1>
+<a href="..">HOME</a> 
+<br>
+<a href="/loadCameraFromConfig">load Camera's</a>
+<form method="post" enctype="multipart/form-data" action="uploadCameraConfig">
+  <input type=file name=file>
+  <input type=submit value=Upload>
+</form>
 
-<ul>
-    <li>
-        <a href="..">..</a> 
-    </li>
+<table >
+    <tr>
+        <th>Name</th>
+        <th>brand</th>
+        <th>Exclude List</th>
+        <th>Latest image</th>
+    </tr>
     {% for camera in cameras %}
-    <li>
-        {{ camera.name }}
+    <tr>
+        <td><a href="{{ camera.url }}" _target="_blank">{{ camera.name }}</td>
+        <td>{{ camera.brand }}</td>
+        <td>{{ camera.excludeList }}</td>
+        <td><img src="files/{{ camera.name }}.jpg" height="100"></td>
         
-    </li>
+    </tr>
     {% endfor %}
-</ul>
+
+</table>

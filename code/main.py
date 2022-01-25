@@ -131,6 +131,9 @@ def hello_world():
                                         debugStatus = CIPS.debugStatus(),
                                         endpointURL = CIPS.ANALYZER.url
                                         )
+@app.route('/cameras')
+def cameras():
+    return render_template("cameras.html", cameras = CAMERAS)
 
 @app.route('/downloadLog')
 def downloadLog():
@@ -257,7 +260,7 @@ def loadCameraFromConfig():
         filelocation = os.path.join(app.config["CONFIG_FOLDER"],"camera",file)
         thread = AddCameraFromConfigThread(filelocation)
         thread.start()
-    return redirect('/')
+    return redirect('/cameras')
 
 
 
@@ -285,14 +288,25 @@ def loadCamera(config):
     print(username)
     brand = config["CAMERA"]["brand"]
     exclude_objects = config["CAMERA"]["exclude_objects"] 
+
     if username != "":
         logging.debug("add camera with authentication")
-        CAM = CIPS_Camera.CIPS_Camera(name, url, HTTPDigestAuth(username,password), exclude_objects )
+        CAM = CIPS_Camera.CIPS_Camera(name, url, HTTPDigestAuth(username,password),brand, exclude_objects )
     else:
         logging.debug("add camera without authentication")
-        CAM = CIPS_Camera.CIPS_Camera(name, url, None, exclude_objects)
-    CAMERAS.append(CAM)
-    CIPS.get_ImageStream(CAM)
+        CAM = CIPS_Camera.CIPS_Camera(name, url, None, brand, exclude_objects)
+    if not any(c.name == CAM.name for c in CAMERAS):
+        logging.debug("adding CAMERA object to array of camera's")
+        CAMERAS.append(CAM)
+        CIPS.get_ImageStream(CAM)
+    else:
+        logging.debug("CAMERA object was already registered")
+
+def deleteCamera(name):
+    logging.debug("deleteCamera")
+    for CAM in CAMERAS:
+        if CAM.name == name:
+            CAMERAS.remove(CAM)
 
 """
     Shutdown the webserver in a graceful manner

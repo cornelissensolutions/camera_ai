@@ -3,12 +3,12 @@
 <h1>HELLO WORLD</h1>
 <p>Cornelissen Image Processing System</p>
 
-<br><a href='/files'>files</a>
+<!--<br><a href='/files'>files</a>-->
 <br>
 <br>
 <table>
   <tr>
-    <th>CAMERA</th>
+    <th><a href="cameras">CAMERAS</a></th>
     <th>ENDPOINT</th>
     <th>TIMER</th>
     <th>FILES</th>
@@ -19,14 +19,10 @@
       <li>
           {{ camera.name }}
           <!-- <a href="{{ () }}">DELETE </a> -->
-          <a href="files/{{camera.name}}.jpg"><img src="files/{{ camera.name }}.jpg" alt="latest image" height=150></a>
+          <!--<a href="files/{{camera.name}}.jpg"><img src="files/{{ camera.name }}.jpg" alt="latest image" height=150></a>-->
       </li>
       {% endfor %}
-      <a href="/loadCameraFromConfig">load Camera's</a>
-      <form method="post" enctype="multipart/form-data" action="uploadCameraConfig">
-        <input type=file name=file>
-        <input type=submit value=Upload>
-      </form>
+
     </td>
 
     <td>
