@@ -43,8 +43,7 @@ class CIPS:
     current_working_dir = os.getcwd()
 
     def __init__(self):
-        self.logger = logging.getlogger(__name__)
-        self.logger.info("Init {}".format(__name__))
+        logging.info("Init {}".format(__name__))
         self.ANALYZER = DEEPSTACK("http://localhost:123/v1/vision/detection")
         print("init CIPS Analyzer")
 
