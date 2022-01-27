@@ -285,22 +285,21 @@ def loadCamera(config):
     url = config["CAMERA"]["url"]
     username = config["CAMERA"]["username"]
     password = config["CAMERA"]["password"]
-    print(username)
     brand = config["CAMERA"]["brand"]
     exclude_objects = config["CAMERA"]["exclude_objects"] 
 
     if username != "":
-        logging.debug("add camera with authentication")
+        logging.debug("create camera object with authentication")
         CAM = CIPS_Camera.CIPS_Camera(name, url, HTTPDigestAuth(username,password),brand, exclude_objects )
     else:
-        logging.debug("add camera without authentication")
+        logging.debug("create camera object without authentication")
         CAM = CIPS_Camera.CIPS_Camera(name, url, None, brand, exclude_objects)
     if not any(c.name == CAM.name for c in CAMERAS):
         logging.debug("adding CAMERA object to array of camera's")
         CAMERAS.append(CAM)
         CIPS.get_ImageStream(CAM)
     else:
-        logging.debug("CAMERA object was already registered")
+        logging.debug("CAMERA object was already registered in the past")
 
 def deleteCamera(name):
     logging.debug("deleteCamera")

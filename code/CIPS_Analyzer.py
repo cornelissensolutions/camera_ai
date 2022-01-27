@@ -9,12 +9,14 @@ from datetime import datetime, time
 
 class DEEPSTACK:
     def __init__(self, URL=""):
+        logging.info("Init {}".format(__name__))
         self.url = URL
     
     """
         Analyze the given image on certain predictions
     """
     def analyze(self, img):
+        logging.debug("analyze image")
         response = requests.post(self.url, files={"image":img}, data={"api_key":""}).json()
         return response
     
@@ -27,7 +29,7 @@ class DEEPSTACK:
 
 class NOTIFIER:
     def __init__(self,url):
-        logging.debug("init NOTIFIER")
+        logging.info("Init {}".format(__name__))
         #https://core.telegram.org/bots/api#sendmessage
         self.url = url
 
@@ -41,7 +43,8 @@ class CIPS:
     current_working_dir = os.getcwd()
 
     def __init__(self):
-        logging.debug("init CIPS Analyzer")
+        self.logger = logging.getlogger(__name__)
+        self.logger.info("Init {}".format(__name__))
         self.ANALYZER = DEEPSTACK("http://localhost:123/v1/vision/detection")
         print("init CIPS Analyzer")
 
@@ -154,6 +157,10 @@ class CIPS:
                     print("saving analyzed object : {}".format(label))
                     filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
                     logging.debug("Saving cropped image {} to {}".format(filename, target_file_folder))
+                    #TODO combine in central save class
+                    if not os.path.exists(target_file_folder):
+                        logging.debug("need to create target folder {}".format(target_file_folder))
+                        os.makedirs(target_file_folder)
                     cropped.save("{}/{}".format(target_file_folder, filename))
                     #self._safe_image(cropped, target_file_folder, filename)
 
@@ -164,11 +171,11 @@ class CIPS:
             if safeFile:
                 print("only saving image once something of interest is found")
                 safeTarget = "{}/{}".format(target_file_folder, parent_filename)
+                #TODO combine in central save class
                 if not os.path.exists(target_file_folder):
                     logging.debug("need to create target folder {}".format(target_file_folder))
                     os.makedirs(target_file_folder)
                 image.save(safeTarget,"JPEG")
-                #self._safe_image(image, target_file_folder, parent_filename)
         else:
             print(response["error"])
 

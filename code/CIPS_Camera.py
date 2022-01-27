@@ -1,9 +1,12 @@
 import requests
 import logging
 
+
+
 class CIPS_Camera:
     def __init__(self, name, url, auth, brand="random", exclude=[], include=[]):
-        logging.info("CIPS_Camera init : {}".format(name))
+        logging.info("Init {} for {}".format(__name__, name))
+        
         print("init CIPS Camera")
         self.name = name
         self.url = url
