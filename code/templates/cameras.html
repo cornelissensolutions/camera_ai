@@ -16,6 +16,7 @@
         <th>brand</th>
         <th>Exclude List</th>
         <th>Latest image</th>
+        <th>Action</th>
     </tr>
     {% for camera in cameras %}
     <tr>
@@ -23,6 +24,8 @@
         <td>{{ camera.brand }}</td>
         <td>{{ camera.excludeList }}</td>
         <td><img src="files/{{ camera.name }}.jpg" height="100"></td>
+        <td><a href="unloadCamera/{{ camera.name }}"><button type="submit" Value=Unload name="{{ camera.name }}">Unload</button></a>
+            <a href="removeCameraFile/{{ camera.name }}"><button type="submit">Delete</button></a<></td>
         
     </tr>
     {% endfor %}

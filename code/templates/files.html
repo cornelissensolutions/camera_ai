@@ -8,9 +8,13 @@
     </li>
     {% for file in files %}
     <li>
-        <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
+<!--        <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
             {{ (request.path + '/' if request.path != '/' else '') + file }} 
         </a>
+    -->
+    <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
+        {{ (request.path + '/' if request.path != '/' else '') + file }} 
+    </a>
         <!-- <a href="{{ () }}">DELETE </a> -->
     </li>
     {% endfor %}

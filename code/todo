@@ -1,7 +1,7 @@
 TECHNICAL
 save images based on timezone 
 support for multiple cameras with different timers
-load camera's ini files into web ui
+remove captured picture file
 
 DEBUG / STATUS
 enable / disable saving of cropped images
@@ -9,6 +9,7 @@ add real time logging viewer
 show status of camera (online offline)
 show status of deep stack (online / offline / busy??)
 run analysis based on provided images
+reduce log file size
 
 FUNCTIONAL
 text in different color then background color

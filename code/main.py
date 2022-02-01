@@ -222,6 +222,27 @@ def killAllThreads():
         t.kill()
     return redirect('/')
 
+@app.route("/removeCameraFile/<file>", methods=["GET"])
+def removeCameraFile(file):
+    logging.debug("{}.removeCameraFile({})".format(__name__, file))
+    fileLocation = "{}/config/camera/{}.ini".format(os.getcwd(), file)
+    removeFile(fileLocation)
+    return redirect('/cameras')
+
+@app.route("/removePictureFile/<file>", methods=["GET"])
+def removePictureFile(file):
+    logging.debug("{}.removePictureFile({})".format(__name__, file))
+    fileLocation = "{}/{}".format(os.getcwd(), file)
+    removeFile(fileLocation)
+    return redirect('/files')
+
+@app.route("/unloadCamera/<name>", methods=["GET"])
+def unloadCamera(name):
+    logging.debug("{}.unloadCamera({})".format(__name__, name))
+    if request.method == "GET":
+        unloadCamera(name)
+    return redirect('/cameras')
+
 @app.route("/updateEndpoint", methods=["POST"])
 def updateEndpoint():
     logging.debug("updateEndpoint")
@@ -231,7 +252,7 @@ def updateEndpoint():
 
 @app.route("/uploadCameraConfig", methods=["POST"])
 def uploadCamera():
-    print("upload camera")
+    logging.debug("{}.uploadCamera".format(__name__))
     dataFile = request.files
     print(dataFile)
     if 'file' not in request.files:
@@ -251,13 +272,13 @@ def uploadCamera():
 
 @app.route("/loadCameraFromConfig")
 def loadCameraFromConfig():
-    logging.debug("loadCameraFromConfig") 
+    logging.debug("loadCameraFromConfig")
     #load all ini files in config/camera
     for file in os.listdir(os.path.join(app.config["CONFIG_FOLDER"],"camera")):
-        print(file)
         filelocation = os.path.join(app.config["CONFIG_FOLDER"],"camera",file)
         thread = AddCameraFromConfigThread(filelocation)
         thread.start()
+    os.wait(300)
     return redirect('/cameras')
 
 
@@ -271,6 +292,12 @@ def loadConfigFile(filelocation):
     config.read(filelocation)
     #TODO validate config settings
     return config
+
+
+
+"""
+CAMERA specific functions
+"""
 
 """
     load Camera into camera pool
@@ -299,21 +326,25 @@ def loadCamera(config):
     else:
         logging.debug("CAMERA object was already registered in the past")
 
-def deleteCamera(name):
-    logging.debug("deleteCamera")
+"""
+    Unload a specific camera from the array of cameras
+"""
+def unloadCamera(name):
+    logging.debug("%s.unloadCamera(%s)".format(__name__, name))
     for CAM in CAMERAS:
         if CAM.name == name:
+            logging.debug("removing %s ".format(name))
             CAMERAS.remove(CAM)
 
 """
     Shutdown the webserver in a graceful manner
 """
 def shutdown_server():
-    logging.debug("shutdown_server") 
+    logging.debug("shutdown_server")
     func = request.environ.get('werkzeug.server.shutdown')
     if func is None:
         raise RuntimeError('Not running with the Werkzeug Server')
-    func()     
+    func()
 
 
 """
@@ -327,13 +358,21 @@ def allowed_file(filename):
     triggers the analysis thread per camera registered
 """
 def getImageStream():
-    logging.debug("getImageStream") 
+    logging.debug("{}.getImageStream".format(__name__))
     #START analysis THREAD per loaded camera
     for CAM in CAMERAS:
         Analysis_pool.acquire()
         thread = AnalysisThread(CAM)
         thread.start()
         Analysis_threads.append(thread)
+
+"""
+    removeFile
+    param file
+"""
+def removeFile(file):
+    logging.debug("{}.removeFile({})".format(__name__, file))
+    os.remove(file)
 
 autoTimer = AutoAnalysisTimer(5, getImageStream)
 
