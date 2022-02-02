@@ -1,11 +1,16 @@
 """"
 Image analyzer class
 """
+from calendar import c
 from io import BytesIO
 import logging, os, os.path
-from PIL import Image, ImageFont, ImageDraw, ImageEnhance
+import math
+from PIL import Image, ImageFont, ImageDraw, ImageEnhance, ImageChops, JpegImagePlugin
+
 import requests
 from datetime import datetime, time
+
+
 
 class DEEPSTACK:
     def __init__(self, URL=""):
@@ -104,7 +109,7 @@ class CIPS:
     """
     def get_ImageStream(self, camera):
         logging.debug("get_ImageStream")
-
+        
         response = camera.stream()
         if response:
             logging.debug("response status code : {}".format(response.status_code))
@@ -123,6 +128,7 @@ class CIPS:
         else:
             logging.error("not retrieving data")
             return False
+    
     """
         _analyse_image_stream
         params:
@@ -136,8 +142,29 @@ class CIPS:
         parent_filename = "{}_{}-analyzed.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"), camera.name)
         target_file_folder = "{}/data/analyzed/{}".format(self.current_working_dir, timeStamp.strftime("%Y%m%d"))
 
+
+        #print(stream)
+        inputImage = Image.open(BytesIO(img)).convert("RGB")
+        previousImage = camera.getPreviousImage()
+        try:
+            diff = ImageChops.difference(inputImage, previousImage)
+        except:
+            print("error determine delta")
+        try:
+            delta = self._image_entropy(diff)
+            print("delta compared to previous frame : {}".format(delta))
+            logging.debug("delta compared to previous frame : {}".format(delta))
+        except:
+            print("error entropy")
+
+        camera.setPrevious(inputImage)
+
         #TODO: add try except
-        response = self.ANALYZER.analyze(img)
+        try:
+            response = self.ANALYZER.analyze(img)
+        except requests.exceptions.ConnectionError:
+            logging.error("Connection error to Analyzer")
+            return 
         logging.debug("DEEPSTACK status : {}".format(response["success"]))
         if response["success"]:
             logging.debug("DEEPSTACK responses : {}".format(response["predictions"]))
@@ -181,6 +208,16 @@ class CIPS:
         else:
             print(response["error"])
 
+
+    def _image_entropy(self, img):
+        """calculate the entropy of an image"""
+        # this could be made more efficient using numpy
+        histogram = img.histogram()
+        histogram_length = sum(histogram)
+        samples_probability = [float(h) / histogram_length for h in histogram]
+        return -sum([p * math.log(p, 2) for p in samples_probability if p != 0])
+
+
     """
         _safe_image
         params:
@@ -189,7 +226,7 @@ class CIPS:
             filename        filename to save
     """
     def _safe_image(self, image, folder, filename):
-        logging.debug("_safe_image(img, {}, {}".format(folder, filename))
+        logging.debug("{}._safe_image(img, {}, {}".format(__name__, folder, filename))
         if not os.path.exists(folder):
             logging.debug("need to create target folder")
             os.makedirs(folder)
