@@ -7,7 +7,7 @@ import os.path
 from datetime import datetime, time
 import subprocess
 import logging, logging.handlers
-from logging.handlers import RotatingFileHandler
+
 
 #import syslog
 import threading
@@ -109,7 +109,7 @@ fileHandler = logging.FileHandler(logFile, 'w', 'utf-8')
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s ::  \t%(message)s')
 fileHandler.setFormatter(formatter)
 #root_logger.addHandler(fileHandler)
-maxFileSizeHandler = RotatingFileHandler(logFile, mode='a', maxBytes=15*1024*1024, backupCount=3, encoding=None, delay=0)
+maxFileSizeHandler = logging.handlers.RotatingFileHandler(logFile, mode='w', maxBytes=15*1024*1024, backupCount=3, encoding=None, delay=0)
 maxFileSizeHandler.setFormatter(formatter)
 root_logger.addHandler(maxFileSizeHandler)
 
