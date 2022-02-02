@@ -7,6 +7,7 @@ import os.path
 from datetime import datetime, time
 import subprocess
 import logging, logging.handlers
+
 #import syslog
 import threading
 from threading import  Timer
@@ -100,12 +101,15 @@ class AutoAnalysisTimer():
 
 
 
-root_logger = logging.getLogger()
+root_logger = logging.getLogger('root')
 root_logger.setLevel(logging.DEBUG)
 fileHandler = logging.FileHandler('camera.log', 'w', 'utf-8')
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s ::  \t%(message)s')
 fileHandler.setFormatter(formatter)
 root_logger.addHandler(fileHandler)
+maxFileSizeHandler = RotatingFileHandler(logFile, mode='a', maxBytes=15*1024*1024, backupCount=3, encoding=None, delay=0)
+root_logger.addHandler(maxFileSizeHandler)
+
 
 threadlock = threading.Lock
 Analysis_threads = []
@@ -141,8 +145,6 @@ def downloadLog():
     except FileNotFoundError:
         abort(404)
 
-
-
 @app.route('/files', defaults={'req_path': ''})
 @app.route('/files/', defaults={'req_path': ''})
 @app.route('/files/<path:req_path>')
@@ -150,6 +152,8 @@ def dir_listing(req_path):
     logging.debug("dir_listing") 
     BASE_DIR = '{}/data'.format(os.getcwd())
 
+    #remove double //
+    req_path.replace("//","/") 
     # Joining the base and the requested path
     abs_path = os.path.join(BASE_DIR, req_path)
 

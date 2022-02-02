@@ -4,7 +4,6 @@ support for multiple cameras with different timers
 remove captured picture file
 
 DEBUG / STATUS
-enable / disable saving of cropped images
 add real time logging viewer 
 show status of camera (online offline)
 show status of deep stack (online / offline / busy??)
