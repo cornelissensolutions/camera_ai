@@ -392,5 +392,5 @@ if __name__ == '__main__':
     HASH = subprocess.check_output(['git', 'log', '-1', "--pretty=format:'%ci'"]).decode('ascii').strip()
     app.debug = True
     app.config['CONFIG_FOLDER'] = CONFIG_FOLDER
-    app.run(host="0.0.0.0", port=81)
+    app.run(host="0.0.0.0", port=80)
   
