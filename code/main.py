@@ -102,16 +102,16 @@ class AutoAnalysisTimer():
 
 
 
-root_logger = logging.getLogger('root')
+root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
 logFile = "camera.log"
 fileHandler = logging.FileHandler(logFile, 'w', 'utf-8')
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s ::  \t%(message)s')
 fileHandler.setFormatter(formatter)
-root_logger.addHandler(fileHandler)
-# maxFileSizeHandler = logging.handlers.RotatingFileHandler(logFile, mode='w', maxBytes=15*1024*1024, backupCount=3, encoding=None, delay=0)
-# maxFileSizeHandler.setFormatter(formatter)
-# root_logger.addHandler(maxFileSizeHandler)
+# root_logger.addHandler(fileHandler)
+maxFileSizeHandler = logging.handlers.RotatingFileHandler(logFile, mode='w', maxBytes=15*1024*1024, backupCount=3, encoding=None, delay=0)
+maxFileSizeHandler.setFormatter(formatter)
+root_logger.addHandler(maxFileSizeHandler)
 
 
 threadlock = threading.Lock
@@ -392,5 +392,5 @@ if __name__ == '__main__':
     HASH = subprocess.check_output(['git', 'log', '-1', "--pretty=format:'%ci'"]).decode('ascii').strip()
     app.debug = True
     app.config['CONFIG_FOLDER'] = CONFIG_FOLDER
-    app.run(host="0.0.0.0", port=80)
+    app.run(host="0.0.0.0", port=81)
   
