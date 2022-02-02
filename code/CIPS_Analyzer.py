@@ -43,9 +43,13 @@ class CIPS:
     current_working_dir = os.getcwd()
 
     def __init__(self):
-        logging.info("Init {}".format(__name__))
-        self.ANALYZER = DEEPSTACK("http://localhost:123/v1/vision/detection")
         print("init CIPS Analyzer")
+        logging.info("Init {}".format(__name__))
+        self.init_DeepStack("http://localhost:123/v1/vision/detection")
+
+
+    def init_DeepStack(self, url):
+        self.ANALYZER = DEEPSTACK(url)
 
     def enableDebug(self):
         logging.debug("enableDebug")
@@ -60,7 +64,6 @@ class CIPS:
         self.SAFE_CROPPED_FILES = False
 
     def debugStatus(self):
-        logging.debug("debugStatus")
         return self.DEBUG
     
     def updateEndpointURL(self, url):

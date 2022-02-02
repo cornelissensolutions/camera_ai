@@ -5,7 +5,7 @@ from requests.auth import HTTPDigestAuth
 import os, sys
 import os.path
 from datetime import datetime, time
-
+import subprocess
 import logging, logging.handlers
 #import syslog
 import threading
@@ -96,8 +96,7 @@ class AutoAnalysisTimer():
         self.start()
 
     def status(self):
-        logging.debug("status")
-        return self._should_continue
+       return self._should_continue
 
 
 
@@ -127,8 +126,10 @@ def hello_world():
                                         timerStatus = autoTimer.status(), 
                                         timerValue=autoTimer.timer, 
                                         debugStatus = CIPS.debugStatus(),
-                                        endpointURL = CIPS.ANALYZER.url
+                                        endpointURL = CIPS.ANALYZER.url,
+                                        hash = HASH
                                         )
+
 @app.route('/cameras')
 def cameras():
     return render_template("cameras.html", cameras = CAMERAS)
@@ -140,11 +141,7 @@ def downloadLog():
     except FileNotFoundError:
         abort(404)
 
-@app.route('/viewLog')
-def viewLog():
-    with open("camera.log", "r") as f:
-        content = f.read()
-    return Response(content, mimetype='text/plain') 
+
 
 @app.route('/files', defaults={'req_path': ''})
 @app.route('/files/', defaults={'req_path': ''})
@@ -273,15 +270,22 @@ def uploadCamera():
 @app.route("/loadCameraFromConfig")
 def loadCameraFromConfig():
     logging.debug("loadCameraFromConfig")
-    #load all ini files in config/camera
+    loadThreads = []
     for file in os.listdir(os.path.join(app.config["CONFIG_FOLDER"],"camera")):
         filelocation = os.path.join(app.config["CONFIG_FOLDER"],"camera",file)
         thread = AddCameraFromConfigThread(filelocation)
         thread.start()
-    os.wait(300)
+        loadThreads.append(thread)
+    logging.info("[+] wait for all threads to finish")         
+    for t in loadThreads:
+        t.join()
     return redirect('/cameras')
 
-
+@app.route('/viewLog')
+def viewLog():
+    with open("camera.log", "r") as f:
+        content = f.read()
+    return Response(content, mimetype='text/plain') 
 
 """
     load config file 
@@ -375,8 +379,10 @@ def removeFile(file):
     os.remove(file)
 
 autoTimer = AutoAnalysisTimer(5, getImageStream)
+HASH = ""
 
 if __name__ == '__main__':
+    HASH = subprocess.check_output(['git', 'log', '-1', "--pretty=format:'%ci'"]).decode('ascii').strip()
     app.debug = True
     app.config['CONFIG_FOLDER'] = CONFIG_FOLDER
     app.run(host="0.0.0.0", port=80)
