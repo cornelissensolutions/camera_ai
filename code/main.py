@@ -1,4 +1,4 @@
-import configparser
+from configparser import ConfigParser
 from flask import Flask, render_template, request, abort, send_file, redirect, send_from_directory, Response
 from werkzeug.utils import secure_filename
 from requests.auth import HTTPDigestAuth
@@ -7,7 +7,7 @@ import os.path
 from datetime import datetime, time
 import subprocess
 import logging, logging.handlers
-
+import json
 
 #import syslog
 import threading
@@ -27,6 +27,7 @@ class AddCameraFromConfigThread(threading.Thread):
         logging.debug("run AddCameraFromConfigThread for {}".format(self.configFile))
         config = loadConfigFile(self.configFile)
         #TODO add check if camera is already added 
+
         loadCamera(config)
     
 
@@ -59,6 +60,7 @@ class AutoAnalysisTimer():
         self._should_continue = False
         self.is_running = False       
         self.timer = timer
+        self.FPS = int(1/timer)
         self.target = target
         self.thread = None
 
@@ -77,6 +79,7 @@ class AutoAnalysisTimer():
 
     def start(self):
         logging.debug("start")
+        self.FPS = int(1/self.timer)
         if not self._should_continue and not self.is_running:
             self._should_continue = True
             self._start_timer()
@@ -95,6 +98,12 @@ class AutoAnalysisTimer():
         logging.debug("updateTimerFreq")
         self.cancel()
         self.timer = newTime
+        self.start()
+
+    def updateFPS(self, FPS):
+        logging.debug("updateFPS")
+        self.cancel()
+        self.timer = 1/FPS
         self.start()
 
     def status(self):
@@ -131,11 +140,15 @@ def hello_world():
     return render_template("main.html", threads=len(Analysis_threads), 
                                         cameras = CAMERAS,
                                         timerStatus = autoTimer.status(), 
-                                        timerValue=autoTimer.timer, 
+                                        timerValue = autoTimer.timer, 
+                                        FPSValue = autoTimer.FPS,
                                         debugStatus = CIPS.debugStatus(),
                                         endpointURL = CIPS.ANALYZER.url,
                                         hash = HASH
                                         )
+@app.route('/addCameraPage')
+def addCameraPage():
+    return render_template("editCamera.html")
 
 @app.route('/cameras')
 def cameras():
@@ -147,6 +160,14 @@ def downloadLog():
         return send_from_directory(os.getcwd(), "camera.log", as_attachment=True)
     except FileNotFoundError:
         abort(404)
+
+@app.route("/editCameraPage/<name>")
+def editCameraPage(name):
+    logging.debug("{}.editCameraPage({})".format(__name__, name))
+    for C in CAMERAS:
+        if C.name == name:
+            CAM = C
+    return render_template("editCamera.html", camera = CAM)
 
 @app.route('/files', defaults={'req_path': ''})
 @app.route('/files/', defaults={'req_path': ''})
@@ -174,6 +195,13 @@ def dir_listing(req_path):
 
     return render_template(template, files=files)
 
+@app.route('/manuallyCreateCameraFile', methods=["GET", "POST"])
+def manuallyCreateCameraFile():
+    logging.debug("manuallyCreateCameraFile") 
+    CameraData = request.form
+    createCameraConfig(CameraData)
+    return redirect('/cameras')
+
 @app.route("/trigger")
 def trigger():
     logging.debug("/trigger")
@@ -193,12 +221,19 @@ def stopTimer():
     autoTimer.cancel()
     return redirect('/')
 
+@app.route('/updateFPS', methods=["GET","POST"])
+def updateFPS():
+    logging.debug("updateFPS")
+    newFPSValue = float(request.form.get("FPSValue"))
+    autoTimer.updateTimerFreq(float(1/newFPSValue))
+    return redirect('/')
+
 @app.route("/updateTimer", methods=["GET", "POST"])
 def updateTimer():
     logging.debug("updateTimer") 
     print("update time")
     newTimerValue = request.form.get("newTimerValue")
-    autoTimer.updateTimerFreq(int(newTimerValue))
+    autoTimer.updateTimerFreq(float(newTimerValue))
     return redirect('/')
 
 @app.route("/stopServer")
@@ -226,10 +261,11 @@ def killAllThreads():
         t.kill()
     return redirect('/')
 
-@app.route("/removeCameraFile/<file>", methods=["GET"])
-def removeCameraFile(file):
-    logging.debug("{}.removeCameraFile({})".format(__name__, file))
-    fileLocation = "{}/config/camera/{}.ini".format(os.getcwd(), file)
+@app.route("/removeCameraFile/<name>", methods=["GET"])
+def removeCameraFile(name):
+    logging.debug("{}.removeCameraFile({})".format(__name__, name))
+    unloadCameraByName(name)
+    fileLocation = "{}/config/camera/{}.ini".format(os.getcwd(), name)
     removeFile(fileLocation)
     return redirect('/cameras')
 
@@ -244,7 +280,7 @@ def removePictureFile(file):
 def unloadCamera(name):
     logging.debug("{}.unloadCamera({})".format(__name__, name))
     if request.method == "GET":
-        unloadCamera(name)
+        unloadCameraByName(name)
     return redirect('/cameras')
 
 @app.route("/updateEndpoint", methods=["POST"])
@@ -274,18 +310,9 @@ def uploadCamera():
 
     return redirect('/')
 
-@app.route("/loadCameraFromConfig")
-def loadCameraFromConfig():
-    logging.debug("loadCameraFromConfig")
-    loadThreads = []
-    for file in os.listdir(os.path.join(app.config["CONFIG_FOLDER"],"camera")):
-        filelocation = os.path.join(app.config["CONFIG_FOLDER"],"camera",file)
-        thread = AddCameraFromConfigThread(filelocation)
-        thread.start()
-        loadThreads.append(thread)
-    logging.info("[+] wait for all threads to finish")         
-    for t in loadThreads:
-        t.join()
+@app.route("/loadCameras")
+def loadCameras():
+    loadCamerasFromConfig()
     return redirect('/cameras')
 
 @app.route('/viewLog')
@@ -294,12 +321,29 @@ def viewLog():
         content = f.read()
     return Response(content, mimetype='text/plain') 
 
+
+def loadCamerasFromConfig():
+    logging.debug("{}.loadCamerasFromConfig".format(__name__))
+    print("loadConfig")
+    loadThreads = []
+
+    configdir = os.path.join(app.config["CONFIG_FOLDER"],"camera")
+    for file in os.listdir(configdir):
+        if file[-4:] == ".ini":
+            filelocation = os.path.join(configdir, file)
+            thread = AddCameraFromConfigThread(filelocation)
+            thread.start()
+            loadThreads.append(thread)
+    # logging.info("[+] wait for all threads to finish")         
+    # for t in loadThreads:
+    #     t.join()
+
 """
     load config file 
 """
 def loadConfigFile(filelocation):
     logging.debug("loadConfigFile({})".format(filelocation))
-    config = configparser.ConfigParser()
+    config = ConfigParser()
     config.read(filelocation)
     #TODO validate config settings
     return config
@@ -309,6 +353,39 @@ def loadConfigFile(filelocation):
 """
 CAMERA specific functions
 """
+
+
+def createCameraConfig(data):
+
+# check is config file exists, then edit
+    #GetAllData
+    config = ConfigParser()
+    config.add_section("CAMERA")
+    config.set('CAMERA','name', data.get("cameraName"))
+    config.set('CAMERA','brand', data.get("cameraBrand"))
+    config.set('CAMERA','model', data.get("cameraModel"))
+    config.set('CAMERA','ip', data.get("cameraIP"))
+    config.set('CAMERA','url', data.get("cameraURL"))
+    config.set('CAMERA','username', data.get("cameraUsername"))
+    config.set('CAMERA','password', data.get("cameraPassword"))
+    #array does not load correct
+    excludeObjects = data.getlist("exclude")
+    excludeString = "[" + ", ".join(excludeObjects)+ "]"
+    config.set('CAMERA','exclude_objects', excludeString)
+
+
+
+    #validateAllData
+
+
+    #print(configFileData)
+    storeLocation = "{}/config/camera/{}.ini".format(os.getcwd(), data.get("cameraName"))
+
+    with open(storeLocation, 'w') as outputFile:
+        config.write(outputFile)
+        
+    loadCamera(config)
+    #load camera
 
 """
     load Camera into camera pool
@@ -333,14 +410,15 @@ def loadCamera(config):
     if not any(c.name == CAM.name for c in CAMERAS):
         logging.debug("adding CAMERA object to array of camera's")
         CAMERAS.append(CAM)
-        CIPS.get_ImageStream(CAM)
+        CAM.get_ImageStream()
+        
     else:
         logging.debug("CAMERA object was already registered in the past")
 
 """
     Unload a specific camera from the array of cameras
 """
-def unloadCamera(name):
+def unloadCameraByName(name):
     logging.debug("%s.unloadCamera(%s)".format(__name__, name))
     for CAM in CAMERAS:
         if CAM.name == name:
@@ -385,7 +463,7 @@ def removeFile(file):
     logging.debug("{}.removeFile({})".format(__name__, file))
     os.remove(file)
 
-autoTimer = AutoAnalysisTimer(5, getImageStream)
+autoTimer = AutoAnalysisTimer(0.2, getImageStream)
 HASH = ""
 
 if __name__ == '__main__':
@@ -393,4 +471,6 @@ if __name__ == '__main__':
     app.debug = True
     app.config['CONFIG_FOLDER'] = CONFIG_FOLDER
     app.run(host="0.0.0.0", port=80)
+    loadCamerasFromConfig()
+    
   

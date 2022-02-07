@@ -16,7 +16,8 @@ services:
     restart: unless-stopped
 
   visiondetection:
-    image: deepquestai/deepstack
+  # sudo docker pull deepquestai/deepstack:arm64-2022.01.1
+    image: deepquestai/deepstack:arm64-2022.01.1
     ports:
       - 123:5000
     environment:

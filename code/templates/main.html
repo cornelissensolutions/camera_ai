@@ -1,12 +1,23 @@
-<!doctype html>
-<meta http-equiv='refresh' content='10'>
-<h1>HELLO WORLD</h1>
-<p>Cornelissen Image Processing System : {{ hash }}</p>
+<!DOCTYPE html>
+<html>
+<head>
 
-<!--<br><a href='/files'>files</a>-->
+<meta http-equiv='refresh' content='10'>
+<style>
+table, th, td {
+  border: 1px solid black;
+}
+</style>
+</head>
+<body>
+
+
+<h1>Cornelissen Image Processing System </h1>
+<p>git commit date: {{ hash }}</p>
+
+
 <br>
-<br>
-<table>
+<table style="width:75%">
   <tr>
     <th><a href="cameras">CAMERAS</a></th>
     <th>ENDPOINT</th>
@@ -19,7 +30,7 @@
       <li>
           {{ camera.name }}
           <!-- <a href="{{ () }}">DELETE </a> -->
-          <!--<a href="files/{{camera.name}}.jpg"><img src="files/{{ camera.name }}.jpg" alt="latest image" height=150></a>-->
+          <a href="files/{{camera.name}}.jpg"><img src="files/{{ camera.name }}.jpg" alt="latest image" height=150></a>
       </li>
       {% endfor %}
 
@@ -34,6 +45,9 @@
       <br>status : {{ timerStatus }} - <a href="/startTimer">Start</a> / <a href="/stopTimer">Stop</a>
       <form action="updateTimer" method="POST">
           <p>seconds <input type = "text" name = "newTimerValue" value='{{ timerValue }}'/><input type="submit" value="update"/></p>
+        </form>          <!-- <p>seconds <input type = "text" name = "newTimerValue" value='{{ timerValue }}'/><input type="submit" value="update"/></p> -->
+      <form action="updateFPS" method="POST">
+        <p>FPS <input type="number" name="FPSValue" value='{{ FPSValue}}'><input type="submit" value="update"/></p>
       </form>
     </td>
     <td>

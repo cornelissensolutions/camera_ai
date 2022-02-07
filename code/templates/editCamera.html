@@ -1,0 +1,28 @@
+Add or Edit your camera manually 
+<form action="manuallyCreateCameraFile" method="POST">
+    <br>Name: <input type = "text" name = "cameraName" value='{{ camera.name }}'/>*
+    <br>Brand: <input type = "text" name = "cameraBrand" value='{{ camera.brand }}'/>
+    <br>model: <input type = "text" name = "cameraModel" value='{{ camera.model }}'/>
+    <br>IP: <input type = "text" name = "cameraIP" value='{{ camera.ip }}'/>
+    <br>Image URL: <input type = "text" name = "cameraURL" value='{{ camera.url }}'/>*
+    <br>username: <input type = "text" name = "cameraUsername" value='{{ camera.username }}'/>* 
+    <br>password: <input type = "password" name = "cameraPassword" value='{{ camera.password }}'/>*
+    <br>exclude objects: <select name = "exclude" id="cars" multiple>
+        <option value="backpack">Back Pack</option>
+        <option value="bench">Bench</option>
+        <option value="bird">Bird</option>
+        <option value="bowl">Bowl</option>
+        <option value="car">Car</option>
+        <option value="chair">Chair</option>
+        <option value="frisbee">Frisbee</option>
+        <option value="motorcycle">Motor Cycle</option>
+        <option value="potted_plant">Potted Plant</option>
+        <option value="remote">Remote</option>
+        <option value="sports_ball">sports ball</option>
+        <option value="train">train</option>
+    </select>
+    <input type="submit" value="update"/></p>
+</form>
+
+
+

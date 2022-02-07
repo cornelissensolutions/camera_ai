@@ -5,7 +5,7 @@ from calendar import c
 from io import BytesIO
 import logging, os, os.path
 import math
-from PIL import Image, ImageFont, ImageDraw, ImageEnhance, ImageChops, JpegImagePlugin
+from PIL import Image, ImageFont, ImageDraw, ImageEnhance, ImageChops, ImageStat, JpegImagePlugin
 
 import requests
 from datetime import datetime, time
@@ -82,8 +82,8 @@ class CIPS:
         logging.debug("CIPS thread run()")
         timestamp = self._current_timeStamp()
         
-        stream = self.get_ImageStream(cameraObject)
-        filename = "{}_{}".format(cameraObject.name, timestamp.strftime("%Y%m%d-%H%M%S"))
+        stream = cameraObject.get_ImageStream()
+        filename = "{}_{}".format(cameraObject.name, timestamp.strftime("%Y%m%d-%H%M%S-%f"))
         target_RAW_file_folder = "{}/data/rawData".format(self.current_working_dir)
         if self.SAFE_RAW_FILES:
             logging.debug("SAFE RAW FILES mode is on, saving camera response to RawData")
@@ -101,116 +101,94 @@ class CIPS:
         print("Run duration : {} + {}".format(getStreamDuration, analyzeDuration))
         logging.debug("Run duration : {} + {}".format(getStreamDuration, analyzeDuration))
 
-    """
-        Get the image stream from a given camera feed. and saves it to latest  
-        params: 
-        camera      Camera class object
-        return  img object
-    """
-    def get_ImageStream(self, camera):
-        logging.debug("get_ImageStream")
-        
-        response = camera.stream()
-        if response:
-            logging.debug("response status code : {}".format(response.status_code))
-            if response.status_code == 200:
-                img = response.content
-                try:
-                    logging.debug("saving latest camera image")
-                    with open("data/{}.jpg".format(camera.name), "wb") as latestImage:
-                        latestImage.write(img)
-                except:
-                    logging.error("FAILED saving latest camera file")
-                return img
-            else:
-                logging.error("No valid response code")
-                return False
-        else:
-            logging.error("not retrieving data")
-            return False
+
     
-    """
+
+    def _analyse_image_stream(self,camera, img, timeStamp):
+        """
         _analyse_image_stream
         params:
-        camera      camera object for exclude list settings
-        img         img feed
-        timeStamp   for saving the files
-    """
-    def _analyse_image_stream(self,camera, img, timeStamp):
+        camera      camera object to obtain settings and previous image
+        img         img feed 
+        timeStamp   for saving the files if something interesting is found
+        """
         logging.debug("_analyse_image_stream")
         print("_analyse_image_stream")
-        parent_filename = "{}_{}-analyzed.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"), camera.name)
-        target_file_folder = "{}/data/analyzed/{}".format(self.current_working_dir, timeStamp.strftime("%Y%m%d"))
 
 
-        #print(stream)
+        #Determine delta compared to previous image
         inputImage = Image.open(BytesIO(img)).convert("RGB")
         previousImage = camera.getPreviousImage()
+        diff_ratio = 0
+        if previousImage == None:
+            print("None")
+            previousImage = inputImage
         try:
             diff = ImageChops.difference(inputImage, previousImage)
+            stat = ImageStat.Stat(diff)
+            diff_ratio = (sum(stat.mean) / (len(stat.mean) * 255)) *100
+            print("diff ratio : {}".format(diff_ratio))
         except:
             print("error determine delta")
-        try:
-            delta = self._image_entropy(diff)
-            print("delta compared to previous frame : {}".format(delta))
-            logging.debug("delta compared to previous frame : {}".format(delta))
-        except:
-            print("error entropy")
+
 
         camera.setPrevious(inputImage)
+        if diff_ratio > camera.threshold:
+            parent_filename = "{}_{}-{}-analyzed.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"), round(diff_ratio, 3), camera.name)
+            target_file_folder = "{}/data/analyzed/{}".format(self.current_working_dir, timeStamp.strftime("%Y%m%d"))
 
-        #TODO: add try except
-        try:
-            response = self.ANALYZER.analyze(img)
-        except requests.exceptions.ConnectionError:
-            logging.error("Connection error to Analyzer")
-            return 
-        logging.debug("DEEPSTACK status : {}".format(response["success"]))
-        if response["success"]:
-            logging.debug("DEEPSTACK responses : {}".format(response["predictions"]))
-            image = Image.open(BytesIO(img)).convert("RGB")
-            safeFile = False
-            i=0
-            draw = ImageDraw.Draw(image) #renamed image_org to image
-            for item in response["predictions"]:
-                label = item["label"]
-                y_max = int(item["y_max"])
-                y_min = int(item["y_min"])
-                x_max = int(item["x_max"])
-                x_min = int(item["x_min"])
-                confidence = str(int(item["confidence"] * 100))
-                if label not in camera.excludeList:
-                    safeFile = True
-                if self.SAFE_CROPPED_FILES:
-                    cropped = image.crop((x_min, y_min, x_max, y_max))
-                    print("saving analyzed object : {}".format(label))
-                    filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
-                    logging.debug("Saving cropped image {} to {}".format(filename, target_file_folder))
+            try:
+                response = self.ANALYZER.analyze(img)
+            except requests.exceptions.ConnectionError:
+                logging.error("Connection error to Analyzer")
+                return 
+            logging.debug("DEEPSTACK status : {}".format(response["success"]))
+            if response["success"]:
+                logging.debug("DEEPSTACK responses : {}".format(response["predictions"]))
+                image = Image.open(BytesIO(img)).convert("RGB")
+                safeFile = False
+                i=0
+                draw = ImageDraw.Draw(image) #renamed image_org to image
+                for item in response["predictions"]:
+                    label = item["label"]
+                    y_max = int(item["y_max"])
+                    y_min = int(item["y_min"])
+                    x_max = int(item["x_max"])
+                    x_min = int(item["x_min"])
+                    confidence = str(int(item["confidence"] * 100))
+                    if label not in camera.excludeList:
+                        safeFile = True
+                    if self.SAFE_CROPPED_FILES:
+                        cropped = image.crop((x_min, y_min, x_max, y_max))
+                        print("saving analyzed object : {}".format(label))
+                        filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
+                        logging.debug("Saving cropped image {} to {}".format(filename, target_file_folder))
+                        #TODO combine in central save class
+                        if not os.path.exists(target_file_folder):
+                            logging.debug("need to create target folder {}".format(target_file_folder))
+                            os.makedirs(target_file_folder)
+                        cropped.save("{}/{}".format(target_file_folder, filename))
+                        #self._safe_image(cropped, target_file_folder, filename)
+
+                    draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="Black" )
+                    text = label + " - " + confidence + "%"
+                    draw.text((x_min+20, y_min+20), text)
+                    i += 1
+                if safeFile:
+                    print("only saving image once something of interest is found")
+                    safeTarget = "{}/{}".format(target_file_folder, parent_filename)
                     #TODO combine in central save class
                     if not os.path.exists(target_file_folder):
                         logging.debug("need to create target folder {}".format(target_file_folder))
                         os.makedirs(target_file_folder)
-                    cropped.save("{}/{}".format(target_file_folder, filename))
-                    #self._safe_image(cropped, target_file_folder, filename)
-
-                draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="Black" )
-                text = label + " - " + confidence + "%"
-                draw.text((x_min+20, y_min+20), text)
-                i += 1
-            if safeFile:
-                print("only saving image once something of interest is found")
-                safeTarget = "{}/{}".format(target_file_folder, parent_filename)
-                #TODO combine in central save class
-                if not os.path.exists(target_file_folder):
-                    logging.debug("need to create target folder {}".format(target_file_folder))
-                    os.makedirs(target_file_folder)
-                image.save(safeTarget,"JPEG")
-        else:
-            print(response["error"])
+                    image.save(safeTarget,"JPEG")
+            else:
+                print(response["error"])
 
 
     def _image_entropy(self, img):
         """calculate the entropy of an image"""
+        """dont know what it does and why the output numbers are so close"""
         # this could be made more efficient using numpy
         histogram = img.histogram()
         histogram_length = sum(histogram)
@@ -218,14 +196,12 @@ class CIPS:
         return -sum([p * math.log(p, 2) for p in samples_probability if p != 0])
 
 
-    """
-        _safe_image
-        params:
-            image
-            folder
-            filename        filename to save
-    """
     def _safe_image(self, image, folder, filename):
+        """
+        param image : image object to be saved
+        param folder : destination folder 
+        param filename : filename of the file
+        """
         logging.debug("{}._safe_image(img, {}, {}".format(__name__, folder, filename))
         if not os.path.exists(folder):
             logging.debug("need to create target folder")

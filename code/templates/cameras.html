@@ -4,11 +4,12 @@
 <h1>{{ request.path }}</h1>
 <a href="..">HOME</a> 
 <br>
-<a href="/loadCameraFromConfig">load Camera's</a>
+<a href="/loadCameras">load Camera's</a>
 <form method="post" enctype="multipart/form-data" action="uploadCameraConfig">
   <input type=file name=file>
   <input type=submit value=Upload>
 </form>
+<a href="/addCameraPage">Add Camera</a>
 
 <table >
     <tr>
@@ -25,7 +26,8 @@
         <td>{{ camera.excludeList }}</td>
         <td><img src="files/{{ camera.name }}.jpg" height="100"></td>
         <td><a href="unloadCamera/{{ camera.name }}"><button type="submit" Value=Unload name="{{ camera.name }}">Unload</button></a>
-            <a href="removeCameraFile/{{ camera.name }}"><button type="submit">Delete</button></a<></td>
+            <a href="removeCameraFile/{{ camera.name }}"><button type="submit">Delete</button></a>
+            <a href="editCameraPage/{{ camera.name }}"><button type="submit">Edit</button></td>
         
     </tr>
     {% endfor %}
