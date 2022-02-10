@@ -2,3 +2,5 @@ flask
 flask-login
 requests
 PILLOW
+numpy
+cv2

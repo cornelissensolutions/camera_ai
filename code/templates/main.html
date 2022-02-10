@@ -40,6 +40,7 @@ table, th, td {
       <form action="updateEndpoint" method="POST">
         <p>URL <input type = "text" name = "newEndPointURL" value='{{ endpointURL }}'/><input type="submit" value="update"/></p>
       </form>
+      status: {{ endpointStatus }}
     </td>
     <td>
       <br>status : {{ timerStatus }} - <a href="/startTimer">Start</a> / <a href="/stopTimer">Stop</a>
@@ -65,6 +66,15 @@ table, th, td {
 
 
 <h2>DEBUG</h2>
+<form action="/updateLogLevel" method="POST">
+  <label for="logLevel">LogLevel:</label>
+  <select name="logLevel" id="logLevel">
+    <option value="DEBUG">DEBUG</option>
+    <option value="INFO">INFO</option>
+    <option value="WARNING">WARNING</option>
+  </select> <input type="submit" value="Submit">
+</form>
+
 <br>status : {{ debugStatus }} - <a href="/enableDebug">enable</a> / <a href="/disableDebug">disable</a>
 <br>Threads : {{ threads }} - <a href="/killAllThreads">Kill All</a>
 <br><a href='/trigger'> Trigger Image collection manual</a>

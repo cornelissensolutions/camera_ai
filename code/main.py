@@ -20,6 +20,7 @@ import CIPS_Camera
 """
 class AddCameraFromConfigThread(threading.Thread):
     def __init__(self, configFile):
+        print("add camera")
         threading.Thread.__init__(self)
         self.configFile = configFile
 
@@ -45,9 +46,10 @@ class AnalysisThread(threading.Thread):
         start_time = datetime.utcnow()
         CIPS.run(self.camera)
         Analysis_pool.release()
-        Analysis_threads.remove(self)
         end_time = datetime.utcnow()
         logging.debug("Thread duration: {}".format((end_time-start_time).total_seconds()))
+        Analysis_threads.remove(self)
+        sys.exit()
 
     def kill(self):
         print("kill")
@@ -106,13 +108,14 @@ class AutoAnalysisTimer():
         self.timer = 1/FPS
         self.start()
 
+
     def status(self):
        return self._should_continue
 
 
 
 root_logger = logging.getLogger()
-root_logger.setLevel(logging.DEBUG)
+root_logger.setLevel(logging.INFO)
 logFile = "camera.log"
 fileHandler = logging.FileHandler(logFile, 'w', 'utf-8')
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s ::  \t%(message)s')
@@ -144,6 +147,7 @@ def hello_world():
                                         FPSValue = autoTimer.FPS,
                                         debugStatus = CIPS.debugStatus(),
                                         endpointURL = CIPS.ANALYZER.url,
+                                        endpointStatus = CIPS.ANALYZER.status,
                                         hash = HASH
                                         )
 @app.route('/addCameraPage')
@@ -228,6 +232,14 @@ def updateFPS():
     autoTimer.updateTimerFreq(float(1/newFPSValue))
     return redirect('/')
 
+@app.route("/updateLogLevel", methods=["GET", "POST"])
+def updateLogLevel():
+    print("web trigger")
+    logLevel = request.form.get("logLevel")
+    print(logLevel)
+    changeLogLevel(logLevel)
+    return redirect('/')
+
 @app.route("/updateTimer", methods=["GET", "POST"])
 def updateTimer():
     logging.debug("updateTimer") 
@@ -291,8 +303,8 @@ def updateEndpoint():
     return redirect('/')
 
 @app.route("/uploadCameraConfig", methods=["POST"])
-def uploadCamera():
-    logging.debug("{}.uploadCamera".format(__name__))
+def uploadCameraConfig():
+    logging.debug("{}.uploadCameraConfig".format(__name__))
     dataFile = request.files
     print(dataFile)
     if 'file' not in request.files:
@@ -307,20 +319,37 @@ def uploadCamera():
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['CONFIG_FOLDER'], "camera", filename))
-
     return redirect('/')
 
 @app.route("/loadCameras")
 def loadCameras():
+    logging.debug("{}.loadCameras".format(__name__))
     loadCamerasFromConfig()
     return redirect('/cameras')
 
 @app.route('/viewLog')
 def viewLog():
+    logging.debug("{}.viewLog".format(__name__))
     with open("camera.log", "r") as f:
         content = f.read()
     return Response(content, mimetype='text/plain') 
 
+
+
+
+
+
+def changeLogLevel(logLevel):
+    logging.debug("{}.changeLogLevel({})".format(__name__, logLevel))
+    if logLevel == "DEBUG":
+        logging.info("change log level to DEBUG")
+        root_logger.setLevel(logging.DEBUG)
+    if logLevel == "INFO":
+        logging.info("change log level to INFO")
+        root_logger.setLevel(logging.INFO)
+    if logLevel == "WARNING":
+        logging.info("change log level to WARNING")
+        root_logger.setLevel(logging.WARNING)
 
 def loadCamerasFromConfig():
     logging.debug("{}.loadCamerasFromConfig".format(__name__))
@@ -410,7 +439,7 @@ def loadCamera(config):
     if not any(c.name == CAM.name for c in CAMERAS):
         logging.debug("adding CAMERA object to array of camera's")
         CAMERAS.append(CAM)
-        CAM.get_ImageStream()
+
         
     else:
         logging.debug("CAMERA object was already registered in the past")
@@ -419,10 +448,10 @@ def loadCamera(config):
     Unload a specific camera from the array of cameras
 """
 def unloadCameraByName(name):
-    logging.debug("%s.unloadCamera(%s)".format(__name__, name))
+    logging.debug("{}.unloadCameraByName({})".format(__name__, name))
     for CAM in CAMERAS:
         if CAM.name == name:
-            logging.debug("removing %s ".format(name))
+            logging.debug("{}.unloadCameraByName : remove {} ".format(__name__, name))
             CAMERAS.remove(CAM)
 
 """
@@ -467,7 +496,8 @@ autoTimer = AutoAnalysisTimer(0.2, getImageStream)
 HASH = ""
 
 if __name__ == '__main__':
-    HASH = subprocess.check_output(['git', 'log', '-1', "--pretty=format:'%ci'"]).decode('ascii').strip()
+    #HASH = subprocess.check_output(['git', 'log', '-1', "--pretty=format:'%ci'"]).decode('ascii').strip()
+    HASH = "today"
     app.debug = True
     app.config['CONFIG_FOLDER'] = CONFIG_FOLDER
     app.run(host="0.0.0.0", port=80)

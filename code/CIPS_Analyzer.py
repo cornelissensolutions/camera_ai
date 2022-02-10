@@ -1,7 +1,7 @@
 """"
 Image analyzer class
 """
-from calendar import c
+
 from io import BytesIO
 import logging, os, os.path
 import math
@@ -16,20 +16,55 @@ class DEEPSTACK:
     def __init__(self, URL=""):
         logging.info("Init {}".format(__name__))
         self.url = URL
+        self.status = False
+        # self.online = self.getStatus()
     
     """
         Analyze the given image on certain predictions
     """
     def analyze(self, img):
-        logging.debug("analyze image")
-        response = requests.post(self.url, files={"image":img}, data={"api_key":""}).json()
+        """
+        param img should be byte array 
+        """
+        logging.debug("{}.analyze(image)".format(__name__))
+        try:
+            response = requests.post(self.url, files={"image":img}, data={"api_key":""}).json()
+        except ConnectionError:
+            logging.error("Connection error to Analyzer")
+            return False
         return response
     
+
+    def getStatus(self):
+        """
+        Get the online / offline status of the endpoint
+        """
+        logging.debug("{}.getStatus".format(__name__))
+        url = ("/".join(self.url.split("/")[0:3]))
+        logging.debug("get status from url : {}".format(url))
+        try:
+            response = requests.get(url)
+        except ConnectionRefusedError:
+            logging.debug("failed connecting")
+            self.status = False
+            return 
+        except ConnectionError:
+            logging.debug("Connection error")
+            self.status = False
+            return 
+
+        logging.debug("return code : {}".format(response.status_code))
+        if response.status_code == 200:
+            self.status = True
+        else:
+            self.status = False
+
     """
         Update Deepstack URL to point to another server
     """
     def updateURL(self, url):
         self.url = url
+        self.getStatus()
 
 
 class NOTIFIER:
@@ -82,19 +117,23 @@ class CIPS:
         logging.debug("CIPS thread run()")
         timestamp = self._current_timeStamp()
         
-        stream = cameraObject.get_ImageStream()
+        imageSucceed = cameraObject.get_CameraImage()
         filename = "{}_{}".format(cameraObject.name, timestamp.strftime("%Y%m%d-%H%M%S-%f"))
+        
         target_RAW_file_folder = "{}/data/rawData".format(self.current_working_dir)
         if self.SAFE_RAW_FILES:
             logging.debug("SAFE RAW FILES mode is on, saving camera response to RawData")
-            self._safe_image(stream, target_RAW_file_folder, filename)
+            self._safe_image(cameraObject.get_LatestContent(), target_RAW_file_folder, filename) 
 
         streamTime = self._current_timeStamp()
         getStreamDuration = round((streamTime-timestamp).total_seconds(),2)
 
-        if stream != False:
-            logging.debug("CIPS thread run got image content, continue to analyze image")
-            self._analyse_image_stream(cameraObject, stream, timestamp)
+        if imageSucceed:
+            logging.debug("CIPS thread run got image content, continue to determine delta")
+            ratio = self._determine_image_ratio(cameraObject)
+            if ratio > cameraObject.threshold:
+                logging.debug("CIPS thread : got a movement detected, continue to determine object")
+                self._analyse_image(cameraObject, timestamp)
         finishedTime = self._current_timeStamp()
 
         analyzeDuration = round((finishedTime - streamTime).total_seconds(),2)
@@ -102,88 +141,82 @@ class CIPS:
         logging.debug("Run duration : {} + {}".format(getStreamDuration, analyzeDuration))
 
 
-    
-
-    def _analyse_image_stream(self,camera, img, timeStamp):
+    def _determine_image_ratio(self, camera):
         """
-        _analyse_image_stream
-        params:
-        camera      camera object to obtain settings and previous image
-        img         img feed 
-        timeStamp   for saving the files if something interesting is found
+        camera object to collect previous and current image
         """
-        logging.debug("_analyse_image_stream")
-        print("_analyse_image_stream")
-
-
         #Determine delta compared to previous image
-        inputImage = Image.open(BytesIO(img)).convert("RGB")
-        previousImage = camera.getPreviousImage()
+        # print(camera.latestImage)
+        inputImage = Image.open(BytesIO(camera.get_LatestContent())).convert("RGB") #Image.open(BytesIO(camera.latestImage)).convert("RGB")
+        previousImage = Image.open(BytesIO(camera.get_PreviousContent())).convert("RGB")
         diff_ratio = 0
         if previousImage == None:
             print("None")
             previousImage = inputImage
-        try:
-            diff = ImageChops.difference(inputImage, previousImage)
-            stat = ImageStat.Stat(diff)
-            diff_ratio = (sum(stat.mean) / (len(stat.mean) * 255)) *100
-            print("diff ratio : {}".format(diff_ratio))
-        except:
-            print("error determine delta")
+
+        diff = ImageChops.difference(inputImage, previousImage)
+        stat = ImageStat.Stat(diff)
+        diff_ratio = (sum(stat.mean) / (len(stat.mean) * 255)) *100
+        print("diff ratio : {}".format(diff_ratio))
+        return diff_ratio
 
 
-        camera.setPrevious(inputImage)
-        if diff_ratio > camera.threshold:
-            parent_filename = "{}_{}-{}-analyzed.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"), round(diff_ratio, 3), camera.name)
-            target_file_folder = "{}/data/analyzed/{}".format(self.current_working_dir, timeStamp.strftime("%Y%m%d"))
+    def _analyse_image(self,camera, timeStamp):
+        """
+        _analyse_image
+        params:
+        camera      camera object to obtain settings and previous image
+        timeStamp   for saving the files if something interesting is found
+        """
+        logging.debug("{}._analyse_image({},{}".format(__name__, camera.name, timeStamp))
+        print("_analyse_image")
+        target_file_folder = "{}/data/analyzed/{}".format(self.current_working_dir, timeStamp.strftime("%Y%m%d"))
+        parent_filename = "{}_{}-analyzed.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"), camera.name)
 
-            try:
-                response = self.ANALYZER.analyze(img)
-            except requests.exceptions.ConnectionError:
-                logging.error("Connection error to Analyzer")
-                return 
-            logging.debug("DEEPSTACK status : {}".format(response["success"]))
-            if response["success"]:
-                logging.debug("DEEPSTACK responses : {}".format(response["predictions"]))
-                image = Image.open(BytesIO(img)).convert("RGB")
-                safeFile = False
-                i=0
-                draw = ImageDraw.Draw(image) #renamed image_org to image
-                for item in response["predictions"]:
-                    label = item["label"]
-                    y_max = int(item["y_max"])
-                    y_min = int(item["y_min"])
-                    x_max = int(item["x_max"])
-                    x_min = int(item["x_min"])
-                    confidence = str(int(item["confidence"] * 100))
-                    if label not in camera.excludeList:
-                        safeFile = True
-                    if self.SAFE_CROPPED_FILES:
-                        cropped = image.crop((x_min, y_min, x_max, y_max))
-                        print("saving analyzed object : {}".format(label))
-                        filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
-                        logging.debug("Saving cropped image {} to {}".format(filename, target_file_folder))
-                        #TODO combine in central save class
-                        if not os.path.exists(target_file_folder):
-                            logging.debug("need to create target folder {}".format(target_file_folder))
-                            os.makedirs(target_file_folder)
-                        cropped.save("{}/{}".format(target_file_folder, filename))
-                        #self._safe_image(cropped, target_file_folder, filename)
 
-                    draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="Black" )
-                    text = label + " - " + confidence + "%"
-                    draw.text((x_min+20, y_min+20), text)
-                    i += 1
-                if safeFile:
-                    print("only saving image once something of interest is found")
-                    safeTarget = "{}/{}".format(target_file_folder, parent_filename)
+        inputBytes = camera.get_LatestContent()
+        response = self.ANALYZER.analyze(inputBytes) # should be input bytes
+        logging.debug("DEEPSTACK status : {}".format(response["success"]))
+        if response:
+            logging.debug("DEEPSTACK responses : {}".format(response["predictions"]))
+            image = Image.open(BytesIO(inputBytes)).convert("RGB")
+            safeFile = False
+            i=0
+            draw = ImageDraw.Draw(image) #renamed image_org to image
+            for item in response["predictions"]:
+                label = item["label"]
+                y_max = int(item["y_max"])
+                y_min = int(item["y_min"])
+                x_max = int(item["x_max"])
+                x_min = int(item["x_min"])
+                confidence = str(int(item["confidence"] * 100))
+                if label not in camera.excludeList:
+                    safeFile = True
+                if self.SAFE_CROPPED_FILES:
+                    cropped = image.crop((x_min, y_min, x_max, y_max))
+                    print("saving analyzed object : {}".format(label))
+                    filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
+                    logging.debug("Saving cropped image {} to {}".format(filename, target_file_folder))
                     #TODO combine in central save class
                     if not os.path.exists(target_file_folder):
                         logging.debug("need to create target folder {}".format(target_file_folder))
                         os.makedirs(target_file_folder)
-                    image.save(safeTarget,"JPEG")
-            else:
-                print(response["error"])
+                    cropped.save("{}/{}".format(target_file_folder, filename))
+                    #self._safe_image(cropped, target_file_folder, filename)
+
+                draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="Black" )
+                text = label + " - " + confidence + "%"
+                draw.text((x_min+20, y_min+20), text)
+                i += 1
+            if safeFile:
+                print("only saving image once something of interest is found")
+                safeTarget = "{}/{}".format(target_file_folder, parent_filename)
+                if not os.path.exists(target_file_folder):
+                    logging.debug("need to create target folder {}".format(target_file_folder))
+                    os.makedirs(target_file_folder)
+                image.save(safeTarget,"JPEG")
+        else:
+            print(response["error"])
 
 
     def _image_entropy(self, img):
@@ -204,18 +237,17 @@ class CIPS:
         """
         logging.debug("{}._safe_image(img, {}, {}".format(__name__, folder, filename))
         if not os.path.exists(folder):
-            logging.debug("need to create target folder")
+            logging.debug("{}._safe_image : need to create target {}".format(__name__, folder))
             os.makedirs(folder)
         try:
             with open("{}/{}.jpg".format(folder, filename), "wb") as latest:
                 latest.write(image)
-            #image.save(folder, filename)
-        except:
-            logging.error("Failed saving file {} to {}".format(filename, folder))
+        except OSError:
+            logging.error("{}._safe_image : Failed saving file {} to {}".format(__name__, filename, folder))
 
     """
         _current_timeStamp
     """
     def _current_timeStamp(self):
-        #CHANGE FOR TIMEZONE    
-        return datetime.utcnow()
+        local_now = datetime.now()
+        return local_now
