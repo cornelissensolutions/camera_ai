@@ -12,7 +12,7 @@ from datetime import datetime, time
 import cv2
 import numpy as np
 import glob
-
+import CIPS_CameraFeed
 
 class DEEPSTACK:
     def __init__(self, URL=""):
@@ -88,7 +88,7 @@ class CIPS:
         print("init CIPS Analyzer")
         logging.info("Init {}".format(__name__))
         self.init_DeepStack("http://localhost:123/v1/vision/detection")
-
+        
 
     def init_DeepStack(self, url):
         self.ANALYZER = DEEPSTACK(url)
@@ -120,6 +120,7 @@ class CIPS:
         timestamp = self._current_timeStamp()
         
         imageSucceed = cameraObject.get_CameraImage()
+        frame = cameraObject.get_CameraFrame()
         filename = "{}_{}".format(cameraObject.name, timestamp.strftime("%Y%m%d-%H%M%S-%f"))
         
         target_RAW_file_folder = "{}/data/rawData".format(self.current_working_dir)
@@ -149,8 +150,13 @@ class CIPS:
         """
         #Determine delta compared to previous image
         # print(camera.latestImage)
-        inputImage = Image.open(BytesIO(camera.get_LatestContent())).convert("RGB") #Image.open(BytesIO(camera.latestImage)).convert("RGB")
-        previousImage = Image.open(BytesIO(camera.get_PreviousContent())).convert("RGB")
+        # inputImage = Image.open(BytesIO(camera.get_LatestContent())).convert("RGB") #Image.open(BytesIO(camera.latestImage)).convert("RGB")
+        inputImage = camera.get_CameraFrame().to_bytes()
+        #TODO get image from rtsp frame
+        # previousImage = Image.open(BytesIO(camera.get_PreviousContent())).convert("RGB")
+        previousImage = Image.fromarray(camera.get_LatestFrame())
+        print(inputImage)
+        print(previousImage)
         diff_ratio = 0
         if previousImage == None:
             print("None")
@@ -205,8 +211,8 @@ class CIPS:
                     cropped.save("{}/{}".format(target_file_folder, filename))
 
                 draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="green", width=2)
-                text = label + " - " + confidence + "%"
-                draw.text((x_min+20, y_min+20), text)
+                text = "{} - {}%".format(label, confidence)
+                draw.text((x_min+20, y_min+20), text, fill="green")
                 i += 1
             if safeFile:
                 print("only saving image once something of interest is found")

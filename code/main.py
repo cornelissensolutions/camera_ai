@@ -1,7 +1,6 @@
 from configparser import ConfigParser
 from flask import Flask, render_template, request, abort, send_file, redirect, send_from_directory, Response
 from werkzeug.utils import secure_filename
-from requests.auth import HTTPDigestAuth
 import os, sys
 import os.path
 from datetime import datetime, time
@@ -112,7 +111,12 @@ class AutoAnalysisTimer():
     def status(self):
        return self._should_continue
 
+class videoCreatorThread():
+    def __init__(self, date):
+        self.date = date
 
+    def generate(self):
+        CIPS.createVideo(self.date)
 
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)
@@ -158,7 +162,12 @@ def addCameraPage():
 def cameras():
     return render_template("cameras.html", cameras = CAMERAS)
 
-
+@app.route("/disableDebug")
+def disableDebug():
+    logging.debug("disableDebug") 
+    CIPS.disableDebug()
+    return redirect('/')
+    
 @app.route('/downloadLog')
 def downloadLog():
     try:
@@ -173,6 +182,12 @@ def editCameraPage(name):
         if C.name == name:
             CAM = C
     return render_template("editCamera.html", camera = CAM)
+
+@app.route("/enableDebug")
+def enableDebug():
+    logging.debug("enableDebug") 
+    CIPS.enableDebug()
+    return redirect('/')
 
 @app.route('/files', defaults={'req_path': ''})
 @app.route('/files/', defaults={'req_path': ''})
@@ -200,78 +215,6 @@ def dir_listing(req_path):
 
     return render_template(template, files=files)
 
-@app.route('/manuallyCreateCameraFile', methods=["GET", "POST"])
-def manuallyCreateCameraFile():
-    logging.debug("manuallyCreateCameraFile") 
-    CameraData = request.form
-    createCameraConfig(CameraData)
-    return redirect('/cameras')
-
-@app.route("/renderVideo/<date>")
-def renderVideo(date):
-    folder = "{}/data/analyzed/{}".format(os.getcwd(), date)
-    CIPS.createVideo(folder)
-    return redirect('/')
-
-@app.route("/trigger")
-def trigger():
-    logging.debug("/trigger")
-    getImageStream()
-    return redirect('/')
-
-@app.route("/startTimer")
-def startTimer():
-    logging.debug("/startTimer")
-
-    autoTimer.start()
-    return redirect('/')
-
-@app.route("/stopTimer")
-def stopTimer():
-    logging.debug("/stopTimer")
-    autoTimer.cancel()
-    return redirect('/')
-
-@app.route('/updateFPS', methods=["GET","POST"])
-def updateFPS():
-    logging.debug("updateFPS")
-    newFPSValue = float(request.form.get("FPSValue"))
-    autoTimer.updateTimerFreq(float(1/newFPSValue))
-    return redirect('/')
-
-@app.route("/updateLogLevel", methods=["GET", "POST"])
-def updateLogLevel():
-    print("web trigger")
-    logLevel = request.form.get("logLevel")
-    print(logLevel)
-    changeLogLevel(logLevel)
-    return redirect('/')
-
-@app.route("/updateTimer", methods=["GET", "POST"])
-def updateTimer():
-    logging.debug("updateTimer") 
-    print("update time")
-    newTimerValue = request.form.get("newTimerValue")
-    autoTimer.updateTimerFreq(float(newTimerValue))
-    return redirect('/')
-
-@app.route("/stopServer")
-def stopServer():
-    logging.debug("stopServer") 
-    shutdown_server()
-    return "server shutting down"
-
-@app.route("/enableDebug")
-def enableDebug():
-    logging.debug("enableDebug") 
-    CIPS.enableDebug()
-    return redirect('/')
-    
-@app.route("/disableDebug")
-def disableDebug():
-    logging.debug("disableDebug") 
-    CIPS.disableDebug()
-    return redirect('/')
 
 @app.route("/killAllThreads")
 def killAllThreads():
@@ -279,6 +222,19 @@ def killAllThreads():
     for t in Analysis_threads:
         t.kill()
     return redirect('/')
+
+@app.route("/loadCameras")
+def loadCameras():
+    logging.debug("{}.loadCameras".format(__name__))
+    loadCamerasFromConfig()
+    return redirect('/cameras')
+
+@app.route('/manuallyCreateCameraFile', methods=["GET", "POST"])
+def manuallyCreateCameraFile():
+    logging.debug("manuallyCreateCameraFile") 
+    CameraData = request.form
+    createCameraConfig(CameraData)
+    return redirect('/cameras')
 
 @app.route("/removeCameraFile/<name>", methods=["GET"])
 def removeCameraFile(name):
@@ -295,6 +251,38 @@ def removePictureFile(file):
     removeFile(fileLocation)
     return redirect('/files')
 
+@app.route("/renderVideo/<date>")
+def renderVideo(date):
+    folder = "{}/data/analyzed/{}".format(os.getcwd(), date)
+    t = videoCreatorThread(folder)
+    t.start()
+    CIPS.createVideo(folder)
+    return redirect('/')
+
+@app.route("/startTimer")
+def startTimer():
+    logging.debug("/startTimer")
+    autoTimer.start()
+    return redirect('/')
+
+@app.route("/stopServer")
+def stopServer():
+    logging.debug("/stopServer") 
+    shutdown_server()
+    return "server shutting down"
+
+@app.route("/stopTimer")
+def stopTimer():
+    logging.debug("/stopTimer")
+    autoTimer.cancel()
+    return redirect('/')
+
+@app.route("/trigger")
+def trigger():
+    logging.debug("/trigger")
+    getImageStream()
+    return redirect('/')
+
 @app.route("/unloadCamera/<name>", methods=["GET"])
 def unloadCamera(name):
     logging.debug("{}.unloadCamera({})".format(__name__, name))
@@ -307,6 +295,13 @@ def updateEndpoint():
     logging.debug("updateEndpoint")
     newEndpoint = request.form.get("newEndPointURL")
     CIPS.updateEndpointURL(newEndpoint)
+    return redirect('/')
+
+@app.route('/updateFPS', methods=["GET","POST"])
+def updateFPS():
+    logging.debug("updateFPS")
+    newFPSValue = float(request.form.get("FPSValue"))
+    autoTimer.updateTimerFreq(float(1/newFPSValue))
     return redirect('/')
 
 @app.route("/uploadCameraConfig", methods=["POST"])
@@ -328,11 +323,21 @@ def uploadCameraConfig():
         file.save(os.path.join(app.config['CONFIG_FOLDER'], "camera", filename))
     return redirect('/')
 
-@app.route("/loadCameras")
-def loadCameras():
-    logging.debug("{}.loadCameras".format(__name__))
-    loadCamerasFromConfig()
-    return redirect('/cameras')
+@app.route("/updateLogLevel", methods=["GET", "POST"])
+def updateLogLevel():
+    print("web trigger")
+    logLevel = request.form.get("logLevel")
+    print(logLevel)
+    changeLogLevel(logLevel)
+    return redirect('/')
+
+@app.route("/updateTimer", methods=["GET", "POST"])
+def updateTimer():
+    logging.debug("updateTimer") 
+    print("update time")
+    newTimerValue = request.form.get("newTimerValue")
+    autoTimer.updateTimerFreq(float(newTimerValue))
+    return redirect('/')
 
 @app.route('/viewLog')
 def viewLog():
@@ -340,6 +345,15 @@ def viewLog():
     with open("camera.log", "r") as f:
         content = f.read()
     return Response(content, mimetype='text/plain') 
+
+
+
+
+
+
+
+
+
 
 
 
@@ -392,7 +406,6 @@ CAMERA specific functions
 
 
 def createCameraConfig(data):
-
 # check is config file exists, then edit
     #GetAllData
     config = ConfigParser()
@@ -439,10 +452,12 @@ def loadCamera(config):
 
     if username != "":
         logging.debug("create camera object with authentication")
-        CAM = CIPS_Camera.CIPS_Camera(name, url, HTTPDigestAuth(username,password),brand, exclude_objects )
+        CAM = CIPS_Camera.CIPS_Camera(name, url, username, password ,brand, exclude_objects )
+    
     else:
         logging.debug("create camera object without authentication")
         CAM = CIPS_Camera.CIPS_Camera(name, url, None, brand, exclude_objects)
+
     if not any(c.name == CAM.name for c in CAMERAS):
         logging.debug("adding CAMERA object to array of camera's")
         CAMERAS.append(CAM)

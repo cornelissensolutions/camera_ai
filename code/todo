@@ -5,7 +5,6 @@ remove captured picture file
 DEBUG / STATUS
 add real time logging viewer 
 show status of camera (online offline)
-show status of deep stack (online / offline / busy??)
 run analysis based on provided images
 
 FUNCTIONAL
@@ -18,5 +17,5 @@ add person too long in view recording
 automatic changing timer frequency based on throughput
 easy walk through images by arrow keys / swiping
 delete raw files older then xx days
-
-
+delta analysis based on color or grey scaled images
+capture image from rtsp feedd instead of rest api
