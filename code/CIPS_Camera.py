@@ -106,11 +106,13 @@ class CIPS_Camera:
     def get_CameraFrame(self):
         startTime = datetime.now()
         self.previousContent = self.latestContent
-        frame = None
-        while frame == None:
+        
+        ret, frame = self.feed.read()
+        while type(frame) == None:
             ret, frame = self.feed.read()
         endTime = datetime.now()
         duration = endTime - startTime
         print("get frame from feed duration: {}".format(duration))
+        print("type : {}".format(type(frame)))
         self.latestContent = frame
         return frame

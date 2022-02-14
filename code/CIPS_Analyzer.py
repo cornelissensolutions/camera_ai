@@ -124,15 +124,13 @@ class CIPS:
         frame = Image.fromarray(cameraObject.get_CameraFrame())
 
         
-        filename = "{}_{}".format(cameraObject.name, timestamp.strftime("%Y%m%d-%H%M%S-%f"))
+        filename = "{}_{}.jpg".format(cameraObject.name, timestamp.strftime("%Y%m%d-%H%M%S-%f"))
         
         target_RAW_file_folder = "{}/data/rawData".format(self.current_working_dir)
         if self.SAFE_RAW_FILES:
-            #TODO rewrite to save frame
             logging.debug("SAFE RAW FILES mode is on, saving camera response to RawData")
-            Image.save("{}/{}".format(target_RAW_file_folder,filename),"JPEG")
-            #self._safe_image(cameraObject.get_LatestContent(), target_RAW_file_folder, filename) 
-
+            # frame.save("{}/{}.jpg".format(target_RAW_file_folder,filename),"JPEG")
+            self._safe_image(frame,target_RAW_file_folder,filename)
         streamTime = self._current_timeStamp()
         getStreamDuration = round((streamTime-timestamp).total_seconds(),2)
 
@@ -210,10 +208,11 @@ class CIPS:
                     print("saving analyzed object : {}".format(label))
                     filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
                     logging.debug("Saving cropped image {} to {}".format(filename, target_file_folder))
-                    if not os.path.exists(target_file_folder):
-                        logging.debug("need to create target folder {}".format(target_file_folder))
-                        os.makedirs(target_file_folder)
-                    cropped.save("{}/{}".format(target_file_folder, filename))
+                    self._safe_image(cropped, target_file_folder, filename)
+                    # if not os.path.exists(target_file_folder):
+                    #     logging.debug("need to create target folder {}".format(target_file_folder))
+                    #     os.makedirs(target_file_folder)
+                    # cropped.save("{}/{}".format(target_file_folder, filename))
 
                 draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="green", width=2)
                 text = "{} - {}%".format(label, confidence)
@@ -221,11 +220,12 @@ class CIPS:
                 i += 1
             if safeFile:
                 print("only saving image once something of interest is found")
-                safeTarget = "{}/{}".format(target_file_folder, parent_filename)
-                if not os.path.exists(target_file_folder):
-                    logging.debug("need to create target folder {}".format(target_file_folder))
-                    os.makedirs(target_file_folder)
-                image.save(safeTarget,"JPEG")
+                # safeTarget = "{}/{}".format(target_file_folder, parent_filename)
+                self._safe_image(image, target_file_folder, parent_filename)
+                # if not os.path.exists(target_file_folder):
+                #     logging.debug("need to create target folder {}".format(target_file_folder))
+                #     os.makedirs(target_file_folder)
+                # image.save(safeTarget,"JPEG")
         else:
             print(response["error"])
 
@@ -272,13 +272,12 @@ class CIPS:
         param folder : destination folder 
         param filename : filename of the file
         """
-        logging.debug("{}._safe_image(img, {}, {}".format(__name__, folder, filename))
+        logging.debug("{}._safe_image({}, {}, {}".format(__name__, type(image), folder, filename))
         if not os.path.exists(folder):
             logging.debug("{}._safe_image : need to create target {}".format(__name__, folder))
             os.makedirs(folder)
         try:
-            with open("{}/{}.jpg".format(folder, filename), "wb") as latest:
-                latest.write(image)
+            image.save("{}/{}".format(folder, filename),"JPEG")
         except OSError:
             logging.error("{}._safe_image : Failed saving file {} to {}".format(__name__, filename, folder))
 
