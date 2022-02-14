@@ -9,7 +9,9 @@ from PIL import Image, ImageFont, ImageDraw, ImageEnhance, ImageChops, ImageStat
 
 import requests
 from datetime import datetime, time
-
+import cv2
+import numpy as np
+import glob
 
 
 class DEEPSTACK:
@@ -197,14 +199,12 @@ class CIPS:
                     print("saving analyzed object : {}".format(label))
                     filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
                     logging.debug("Saving cropped image {} to {}".format(filename, target_file_folder))
-                    #TODO combine in central save class
                     if not os.path.exists(target_file_folder):
                         logging.debug("need to create target folder {}".format(target_file_folder))
                         os.makedirs(target_file_folder)
                     cropped.save("{}/{}".format(target_file_folder, filename))
-                    #self._safe_image(cropped, target_file_folder, filename)
 
-                draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="Black" )
+                draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="green", width=2)
                 text = label + " - " + confidence + "%"
                 draw.text((x_min+20, y_min+20), text)
                 i += 1
@@ -217,6 +217,32 @@ class CIPS:
                 image.save(safeTarget,"JPEG")
         else:
             print(response["error"])
+
+
+    def createVideo(self,folder):
+        """
+        Create an video file from files in a folder
+        """
+        logging.debug("{}.createVideo()".format(__name__))
+        img_array = []
+        print("[+] analyze source folder AND CREATE VIDEO")
+        folderContent = sorted(os.listdir(folder))
+        for filename in folderContent:
+            if filename.endswith(".jpg"):
+                img = cv2.imread("{}/{}".format(folder,filename))
+                height, width, layers = img.shape
+                size = (width,height)
+                img_array.append(img)
+
+        fps = 2
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        out = cv2.VideoWriter('{}/output.avi'.format(folder),fourcc, fps, size)
+        for i in range(len(img_array)):
+            out.write(img_array[i])
+        out.release()
+
+
+
 
 
     def _image_entropy(self, img):

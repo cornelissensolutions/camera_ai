@@ -158,6 +158,7 @@ def addCameraPage():
 def cameras():
     return render_template("cameras.html", cameras = CAMERAS)
 
+
 @app.route('/downloadLog')
 def downloadLog():
     try:
@@ -205,6 +206,12 @@ def manuallyCreateCameraFile():
     CameraData = request.form
     createCameraConfig(CameraData)
     return redirect('/cameras')
+
+@app.route("/renderVideo/<date>")
+def renderVideo(date):
+    folder = "{}/data/analyzed/{}".format(os.getcwd(), date)
+    CIPS.createVideo(folder)
+    return redirect('/')
 
 @app.route("/trigger")
 def trigger():
