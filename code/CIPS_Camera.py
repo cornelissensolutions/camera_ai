@@ -35,11 +35,6 @@ class CIPS_Camera:
     def get_PreviousContent(self):
         return self.previousContent
 
-    def get_frame(self):
-        ret, frame = self.feed.read()
-        return frame
-    def get_LatestFrame(self):
-        return self.latestFrame
 
     def get_LatestImage(self):
         return self.latestImage
@@ -47,8 +42,6 @@ class CIPS_Camera:
     def get_PreviousImage(self):
         return self.previousImage
 
-    def set_LatestFrame(self, frame):
-        self.latestFrame = frame
     
     def set_PreviousImage(self, img):
         self.previousImage = img
@@ -112,8 +105,12 @@ class CIPS_Camera:
 
     def get_CameraFrame(self):
         startTime = datetime.now()
-        content = self.get_frame()
+        self.previousContent = self.latestContent
+        frame = None
+        while frame == None:
+            ret, frame = self.feed.read()
         endTime = datetime.now()
         duration = endTime - startTime
-        print(duration)
-        return content
+        print("get frame from feed duration: {}".format(duration))
+        self.latestContent = frame
+        return frame

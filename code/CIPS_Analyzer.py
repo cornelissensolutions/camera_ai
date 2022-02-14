@@ -6,6 +6,7 @@ from io import BytesIO
 import logging, os, os.path
 import math
 from PIL import Image, ImageFont, ImageDraw, ImageEnhance, ImageChops, ImageStat, JpegImagePlugin
+from debugpy import trace_this_thread
 
 import requests
 from datetime import datetime, time
@@ -119,19 +120,23 @@ class CIPS:
         logging.debug("CIPS thread run()")
         timestamp = self._current_timeStamp()
         
-        imageSucceed = cameraObject.get_CameraImage()
-        frame = cameraObject.get_CameraFrame()
+        #imageSucceed = cameraObject.get_CameraImage()
+        frame = Image.fromarray(cameraObject.get_CameraFrame())
+
+        
         filename = "{}_{}".format(cameraObject.name, timestamp.strftime("%Y%m%d-%H%M%S-%f"))
         
         target_RAW_file_folder = "{}/data/rawData".format(self.current_working_dir)
         if self.SAFE_RAW_FILES:
+            #TODO rewrite to save frame
             logging.debug("SAFE RAW FILES mode is on, saving camera response to RawData")
-            self._safe_image(cameraObject.get_LatestContent(), target_RAW_file_folder, filename) 
+            Image.save("{}/{}".format(target_RAW_file_folder,filename),"JPEG")
+            #self._safe_image(cameraObject.get_LatestContent(), target_RAW_file_folder, filename) 
 
         streamTime = self._current_timeStamp()
         getStreamDuration = round((streamTime-timestamp).total_seconds(),2)
 
-        if imageSucceed:
+        if frame:
             logging.debug("CIPS thread run got image content, continue to determine delta")
             ratio = self._determine_image_ratio(cameraObject)
             if ratio > cameraObject.threshold:
@@ -148,15 +153,15 @@ class CIPS:
         """
         camera object to collect previous and current image
         """
+        logging.debug("{}._determine_image_ratio()".format(__name__))
         #Determine delta compared to previous image
         # print(camera.latestImage)
         # inputImage = Image.open(BytesIO(camera.get_LatestContent())).convert("RGB") #Image.open(BytesIO(camera.latestImage)).convert("RGB")
-        inputImage = camera.get_CameraFrame().to_bytes()
-        #TODO get image from rtsp frame
+        inputImage = Image.fromarray(camera.get_CameraFrame())
+        
+        
         # previousImage = Image.open(BytesIO(camera.get_PreviousContent())).convert("RGB")
-        previousImage = Image.fromarray(camera.get_LatestFrame())
-        print(inputImage)
-        print(previousImage)
+        previousImage = Image.fromarray(camera.get_PreviousContent())
         diff_ratio = 0
         if previousImage == None:
             print("None")
