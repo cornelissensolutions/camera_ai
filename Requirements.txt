@@ -3,4 +3,4 @@ flask-login
 requests
 PILLOW
 numpy
-cv2
+opencv-python
