@@ -1,3 +1,7 @@
+TEST
+reduce log file size
+
+
 TECHNICAL
 save images based on timezone 
 support for multiple cameras with different timers
@@ -8,7 +12,6 @@ add real time logging viewer
 show status of camera (online offline)
 show status of deep stack (online / offline / busy??)
 run analysis based on provided images
-reduce log file size
 
 FUNCTIONAL
 text in different color then background color
