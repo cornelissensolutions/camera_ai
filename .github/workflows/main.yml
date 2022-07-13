@@ -14,14 +14,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Python Linter
-      uses: sunnysid3up/python-linter@master
-      with:
-        source: "code"
-        mypy-options: "--ignore-missing-imports --show-error-codes"
-        pylint-options: "--rcfile=setup.cfg"
-        isort-options: "-w 100"
-        django: false
+
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag cameraai:$(date +%s)
     
