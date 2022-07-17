@@ -1,0 +1,12 @@
+[CAMERA]
+name = achterdeur
+brand = Hikvision
+model = cam
+ip = 10.0.66.70
+url = http://10.0.66.70/Streaming/channels/1/picture
+username = test
+password = T3sterer
+exclude_objects = ["chair", "bench", "potted plant", "motorcycle", "bird", "sports_ball","train","frisbee","bawl","backpack"]
+
+[SETTINGS]
+diff_threshold = 1

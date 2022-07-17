@@ -11,12 +11,17 @@ run analysis based on provided images
 FUNCTIONAL
 add saving of videostream instead of single images ! 
 combine detections to movie / gif. based on all detections happened within 3 min after last detection
+videocreation on seperate thread / report on progress? 
+
 
 text in different color then background color
+
 add exclude area on camera feed
+add include area on camera feed
 add person too long in view recording
 automatic changing timer frequency based on throughput
 easy walk through images by arrow keys / swiping
 delete raw files older then xx days
-
+save images to different location
+videocreation on seperate thread / report on progress? 
 

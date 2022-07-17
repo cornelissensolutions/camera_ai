@@ -20,13 +20,9 @@ class DEEPSTACK:
         self.url = URL
         self.status = False
         # self.online = self.getStatus()
-    
-    """
-        Analyze the given image on certain predictions
-    """
+
     def analyze(self, img):
-        """
-        param img should be byte array 
+        """Analyze the given image on certain predictions, param img should be byte array
         """
         logging.debug("{}.analyze(image)".format(__name__))
         try:
@@ -49,11 +45,11 @@ class DEEPSTACK:
         except ConnectionRefusedError:
             logging.debug("failed connecting")
             self.status = False
-            return 
+            return
         except ConnectionError:
             logging.debug("Connection error")
             self.status = False
-            return 
+            return
 
         logging.debug("return code : {}".format(response.status_code))
         if response.status_code == 200:
@@ -225,7 +221,6 @@ class CIPS:
         """
         logging.debug("{}.createVideo()".format(__name__))
         img_array = []
-        print("[+] analyze source folder AND CREATE VIDEO")
         folderContent = sorted(os.listdir(folder))
         for filename in folderContent:
             if filename.endswith(".jpg"):
@@ -240,6 +235,7 @@ class CIPS:
         for i in range(len(img_array)):
             out.write(img_array[i])
         out.release()
+        logging.info("[+] done rendering video for folder {}".format(folder))
 
 
 

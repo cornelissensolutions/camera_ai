@@ -31,12 +31,21 @@ class AddCameraFromConfigThread(threading.Thread):
 
         loadCamera(config)
     
+class videoRenderThread():
+    '''Create Video in seperate thread to optimize responsiveness'''
+    def __init__(self, folder):
+        self.folder = folder
+    
+    def run(self):
+        CIPS.createVideo(self.folder)
 
 
 """
     seperate thread to do all analysis 
 """
 class AnalysisThread(threading.Thread):
+    '''Start all analysis in seperate thread'''
+
     def __init__(self, cameraObject):
         threading.Thread.__init__(self)
         self.camera = cameraObject
@@ -58,6 +67,7 @@ class AnalysisThread(threading.Thread):
         Analysis_threads.remove(self)
 
 class AutoAnalysisTimer():
+
     def __init__(self, timer, target):
         self._should_continue = False
         self.is_running = False       
@@ -113,7 +123,6 @@ class AutoAnalysisTimer():
        return self._should_continue
 
 
-
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)
 logFile = "camera.log"
@@ -127,6 +136,7 @@ root_logger.addHandler(maxFileSizeHandler)
 
 
 threadlock = threading.Lock
+renderVideoThreadLock = threading.Lock
 Analysis_threads = []
 Analysis_pool = threading.BoundedSemaphore(value=10)
 current_working_dir = os.getcwd()
@@ -210,7 +220,9 @@ def manuallyCreateCameraFile():
 @app.route("/renderVideo/<date>")
 def renderVideo(date):
     folder = "{}/data/analyzed/{}".format(os.getcwd(), date)
-    CIPS.createVideo(folder)
+
+    thread = videoRenderThread(folder)
+    thread.run()
     return redirect('/')
 
 @app.route("/trigger")
@@ -503,11 +515,9 @@ autoTimer = AutoAnalysisTimer(0.2, getImageStream)
 HASH = ""
 
 if __name__ == '__main__':
-    #HASH = subprocess.check_output(['git', 'log', '-1', "--pretty=format:'%ci'"]).decode('ascii').strip()
-    HASH = "today"
+    HASH = subprocess.check_output(['git', 'log', '-1', "--pretty=format:'%ci'"]).decode('ascii').strip()
+    #HASH = "today"
     app.debug = True
     app.config['CONFIG_FOLDER'] = CONFIG_FOLDER
     app.run(host="0.0.0.0", port=80)
     loadCamerasFromConfig()
-    
-  
