@@ -31,7 +31,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: docker-artifact
-        path: cornelissensolutions/cameraai
+        path: cornelissensolutions/cameraai:latest
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
