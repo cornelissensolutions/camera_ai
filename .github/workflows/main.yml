@@ -24,7 +24,7 @@ jobs:
 
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag cameraai:$(date +%s)
-    
+
     - name: upload artifact
       uses: actions/upload-artifact@v3
       with:
