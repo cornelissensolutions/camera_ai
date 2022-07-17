@@ -23,5 +23,5 @@ automatic changing timer frequency based on throughput
 easy walk through images by arrow keys / swiping
 delete raw files older then xx days
 save images to different location
-videocreation on seperate thread / report on progress? 
+videocreation on seperate thread / report on progress? -> partially implemented
 
