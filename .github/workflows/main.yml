@@ -1,0 +1,26 @@
+name: MAIN + Docker Image CI
+
+on:
+  push:
+    branches: 
+      - main
+      - develop
+  pull_request:
+    branches: [ "master", "develop" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag cameraai:$(date +%s)
+    
+    - uses: actions/upload-artifact@v3
+      with:
+        name: docker-artifact
+        path: cameraai
