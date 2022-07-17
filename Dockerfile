@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip
 
 COPY ./Requirements.txt Requirements.txt
+RUN python -m pip install --upgrade pip
 RUN pip install -r Requirements.txt
 
 RUN mkdir -p /home/app
