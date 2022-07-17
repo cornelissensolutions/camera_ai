@@ -27,6 +27,9 @@ jobs:
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag cornelissensolutions/cameraai:${{ env.dateTag }}
 
+    - name: Build the Docker image
+      run: docker push cornelissen/cameraai
+
     - name: upload artifact
       uses: actions/upload-artifact@v3
       with:
