@@ -15,10 +15,9 @@ from threading import  Timer
 import CIPS_Analyzer
 import CIPS_Camera
 
-"""
-    seperate thread to load camera's from config
-"""
+
 class AddCameraFromConfigThread(threading.Thread):
+    '''seperate thread to load camera's from config file'''
     def __init__(self, configFile):
         print("add camera")
         threading.Thread.__init__(self)
