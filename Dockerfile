@@ -17,7 +17,7 @@ RUN mkdir -p /home/app/templates
 WORKDIR /home/app/
 
 COPY code /home/app
-# COPY ./code/templates /home/app/templates
+COPY ./code/templates /home/app/templates
 EXPOSE 80
 ENTRYPOINT ["python"]
-CMD ["/home/app/main.py"]
+CMD ["main.py"]

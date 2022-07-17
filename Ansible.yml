@@ -1,0 +1,68 @@
+#--extra-vars '{"application":"name"}'
+- name: Upgrade all docker containers
+  hosts: all
+  remote_user: "{{ remote_user }}"
+  become: yes
+  vars_files:
+  - vars/default.yml
+
+  tasks:
+#    - name: Reboot the machine (Wait for 5 min)
+#      reboot:
+# #        reboot_timeout: 300
+    - name: update & upgrade
+      apt:
+        update_cache: yes
+        upgrade: full
+
+    - name: Upgrade the OS (apt-get dist-upgrade)
+      apt:
+        upgrade: dist
+# Install docker
+
+    # - name: Install aptitude using apt
+    #   apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+    - name: Install required system packages
+      apt: name={{ item }} state=latest update_cache=yes
+      loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools', 'docker', 'docker-compose']
+      retries: 3
+      delay: 3
+
+
+    - name: Add the user 'remote_user'  appending the group 'docker'
+      user:
+        name: "{{ remote_user }}"
+        groups: docker
+        append: yes
+
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+#improve with  $(lsb_release -cs) instead of bionic
+    # - name: Add Docker Repository
+    #   apt_repository:
+    #     repo: deb https://download.docker.com/linux/ubuntu bionic stable
+    #     state: present
+
+    - name: Update apt and install docker-ce
+      apt:
+        update_cache=yes
+        name=docker-ce
+        state=latest
+
+
+    - name: create target folder
+      git:
+        repo: 'https://github.com/cornelissensolutions/camera_ai'
+        dest: /opt/CIPS
+        update: yes
+
+      
+
+    - name: start all containers
+      shell:
+        cmd: docker-compose up -d
+        chdir: "/opt/CIPS"
