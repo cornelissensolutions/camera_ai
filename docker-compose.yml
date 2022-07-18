@@ -2,8 +2,9 @@ version: "3.3"
 
 services:
   cameraai:
-    container_name: cameraai
-    build: .
+    image: cornelissensolutions/cameraai:latest
+    #container_name: cameraai
+    #build: .
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
