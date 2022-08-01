@@ -191,7 +191,7 @@ def dir_listing(req_path):
     BASE_DIR = '{}/data'.format(os.getcwd())
 
     #remove double //
-    req_path.replace("//","/") 
+    req_path.replace("//","/")
     # Joining the base and the requested path
     abs_path = os.path.join(BASE_DIR, req_path)
 
@@ -206,7 +206,6 @@ def dir_listing(req_path):
     # Show directory contents
     files = sorted(os.listdir(abs_path))
     template = "files.html"
-
     return render_template(template, files=files)
 
 @app.route('/manuallyCreateCameraFile', methods=["GET", "POST"])
