@@ -32,8 +32,9 @@ services:
     volumes:
       - ./data:/datastore
     restart: unless-stopped
+
 networks:
   cameraai:
-    external: true
+    driver: bridge
 volumes:
   CIPS-volume:    
