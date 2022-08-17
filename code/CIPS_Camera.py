@@ -70,13 +70,12 @@ class CIPS_Camera:
 
     def get_CameraImage(self):
         """
-        Get the image stream from a given camera feed. and saves it to latest  
-        params: 
+        Get the image stream from a given camera feed. and saves it to latest
+        params:
         camera      Camera class object
         return  img object
         """
         logging.debug("{}.get_ImageStream()".format(__name__))
-        
         content = self.get_Response()
         if content:
             self.previousContent = self.latestContent
@@ -85,7 +84,7 @@ class CIPS_Camera:
                 logging.debug("saving latest camera image")
                 with open("data/{}.jpg".format(self.name), "wb") as latestImage:
                     latestImage.write(content)
-                return True 
+                return True
             except:
                 logging.error("{}.get_CameraImage : FAILED saving latest camera file".format(__name__))
             return self.latestContent

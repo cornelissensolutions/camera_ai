@@ -26,7 +26,7 @@ class AddCameraFromConfigThread(threading.Thread):
     def run(self):
         logging.debug("run AddCameraFromConfigThread for {}".format(self.configFile))
         config = loadConfigFile(self.configFile)
-        #TODO add check if camera is already added 
+        #TODO add check if camera is already added
 
         loadCamera(config)
     
@@ -129,7 +129,12 @@ fileHandler = logging.FileHandler(logFile, 'w', 'utf-8')
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s ::  \t%(message)s')
 fileHandler.setFormatter(formatter)
 # root_logger.addHandler(fileHandler)
-maxFileSizeHandler = logging.handlers.RotatingFileHandler(logFile, mode='w', maxBytes=15*1024*1024, backupCount=3, encoding=None, delay=0)
+maxFileSizeHandler = logging.handlers.RotatingFileHandler(logFile, 
+                                                        mode='w', 
+                                                        maxBytes=15*1024*1024, 
+                                                        backupCount=3, 
+                                                        encoding=None, 
+                                                        delay=0)
 maxFileSizeHandler.setFormatter(formatter)
 root_logger.addHandler(maxFileSizeHandler)
 
@@ -287,7 +292,10 @@ def disableDebug():
 def killAllThreads():
     logging.debug("killAllThreads")
     for t in Analysis_threads:
-        t.kill()
+        try:
+            t.kill()
+        except:
+            logging.debug("try to kill a thread but ran into an issue")
     return redirect('/')
 
 @app.route("/removeCameraFile/<name>", methods=["GET"])

@@ -5,7 +5,8 @@ reduce log file size
 TECHNICAL
 support for multiple cameras with different timers
 remove captured picture file
-
+show actual disk space
+clean up policy of folders older then xx days
 DEBUG / STATUS
 add real time logging viewer 
 show status of camera (online offline)
