@@ -1,0 +1,24 @@
+name: deploy
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    # We need this because GitHub needs to clone the branch to pipeline
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: Deploy
+        uses: "./.github/deploy" #Just need to pass the path from action
+       # Defining the variables required in our action
+        with:
+          version: v1.0.0
+          namespace: "stage"
+   

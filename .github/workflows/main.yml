@@ -27,6 +27,7 @@ jobs:
 #    - name: Push the Docker Image to docker hub
 #      run: docker push cornelissensolutions/cameraai
 
+
     - name: upload artifact
       uses: actions/upload-artifact@v3
       with:
