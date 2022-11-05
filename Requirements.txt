@@ -6,5 +6,5 @@ numpy
 opencv-python
 
 ffmpeg 
-libsm6 
+# libsm6 
 libxext6 
