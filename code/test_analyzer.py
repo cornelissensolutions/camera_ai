@@ -8,8 +8,3 @@ def test_debug():
     status = CIPS.debugStatus()
     assert status == True
 
-def test_updateEndpoint():
-    CIPS = CIPS_Analyzer.CIPS()
-    response = CIPS.updateEndpointURL("test123")
-    assert response == "test123"
-    
