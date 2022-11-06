@@ -3,15 +3,15 @@ Image analyzer class
 """
 
 from io import BytesIO
-import logging, os, os.path
+import logging
+import os
+import os.path
 import math
-from PIL import Image, ImageFont, ImageDraw, ImageEnhance, ImageChops, ImageStat, JpegImagePlugin
+from PIL import Image, ImageDraw, ImageChops, ImageStat
 
 import requests
-from datetime import datetime, time
+from datetime import datetime
 import cv2
-import numpy as np
-import glob
 
 
 class DEEPSTACK:
@@ -22,16 +22,19 @@ class DEEPSTACK:
         # self.online = self.getStatus()
 
     def analyze(self, img):
-        """Analyze the given image on certain predictions, param img should be byte array
+        """
+        Analyze the given image on certain predictions
+        param img should be byte array
         """
         logging.debug("{}.analyze(image)".format(__name__))
         try:
-            response = requests.post(self.url, files={"image":img}, data={"api_key":""}).json()
+            response = requests.post(self.url,
+                                     files={"image": img},
+                                     data={"api_key": ""}).json()
         except ConnectionError:
             logging.error("Connection error to Analyzer")
             return False
         return response
-    
 
     def getStatus(self):
         """
@@ -66,25 +69,25 @@ class DEEPSTACK:
 
 
 class NOTIFIER:
-    def __init__(self,url):
+    def __init__(self, url):
         logging.info("Init {}".format(__name__))
-        #https://core.telegram.org/bots/api#sendmessage
+        # https://core.telegram.org/bots/api#sendmessage
         self.url = url
 
     def message(self, text):
         requests.get(self.url)
 
+
 class CIPS:
     DEBUG = False
     SAFE_RAW_FILES = False
     SAFE_CROPPED_FILES = False
-    current_working_dir = os.getcwd()
+    cwd = os.getcwd()
 
     def __init__(self):
         print("init CIPS Analyzer")
         logging.info("Init {}".format(__name__))
         self.init_DeepStack("http://localhost:123/v1/vision/detection")
-
 
     def init_DeepStack(self, url):
         self.ANALYZER = DEEPSTACK(url)
@@ -103,84 +106,94 @@ class CIPS:
 
     def debugStatus(self):
         return self.DEBUG
-    
+
     def updateEndpointURL(self, url):
         self.ANALYZER.updateURL(url)
         return self.ANALYZER.url
 
     """
-        Is triggered by thread to gather image feed and performs analasis 
+        Is triggered by thread to gather image feed and performs analasis
     """
-    def run(self,cameraObject):
+    def run(self, cameraObject):
         logging.debug("CIPS thread run()")
         timestamp = self._current_timeStamp()
-        
+
         imageSucceed = cameraObject.get_CameraImage()
-        filename = "{}_{}".format(cameraObject.name, timestamp.strftime("%Y%m%d-%H%M%S-%f"))
-        
-        target_RAW_file_folder = "{}/data/rawData".format(self.current_working_dir)
+        filename = "{}_{}".format(cameraObject.name,
+                                  timestamp.strftime("%Y%m%d-%H%M%S-%f"))
+
+        target_RAW_file_folder = "{}/data/rawData".format(self.cwd)
         if self.SAFE_RAW_FILES:
-            logging.debug("SAFE RAW FILES mode is on, saving camera response to RawData")
-            self._safe_image(cameraObject.get_LatestContent(), target_RAW_file_folder, filename) 
+            logging.debug("saving camera response to RawData")
+            self._safe_image(cameraObject.get_LatestContent(),
+                             target_RAW_file_folder,
+                             filename)
 
         streamTime = self._current_timeStamp()
-        getStreamDuration = round((streamTime-timestamp).total_seconds(),2)
+        getStreamDuration = round((streamTime-timestamp).total_seconds(), 2)
 
         if imageSucceed:
-            logging.debug("CIPS thread run got image content, continue to determine delta")
+            logging.debug("got image content, continue to determine delta")
             ratio = self._determine_image_ratio(cameraObject)
             if ratio > cameraObject.threshold:
-                logging.debug("CIPS thread : got a movement detected, continue to determine object")
+                logging.debug("movement detected, go to determine object")
                 self._analyse_image(cameraObject, timestamp)
         finishedTime = self._current_timeStamp()
 
-        analyzeDuration = round((finishedTime - streamTime).total_seconds(),2)
-        print("Run duration : {} + {}".format(getStreamDuration, analyzeDuration))
-        logging.debug("Run duration : {} + {}".format(getStreamDuration, analyzeDuration))
-
+        analyzeDuration = round((finishedTime - streamTime).total_seconds(), 2)
+        print("Run duration : {} + {}".format(getStreamDuration,
+                                              analyzeDuration))
+        logging.debug("Run duration : {} + {}".format(getStreamDuration,
+                                                      analyzeDuration))
 
     def _determine_image_ratio(self, camera):
         """
         camera object to collect previous and current image
         """
-        #Determine delta compared to previous image
+        # Determine delta compared to previous image
         # print(camera.latestImage)
-        inputImage = Image.open(BytesIO(camera.get_LatestContent())).convert("RGB") #Image.open(BytesIO(camera.latestImage)).convert("RGB")
-        previousImage = Image.open(BytesIO(camera.get_PreviousContent())).convert("RGB")
+        camLatestBytes = BytesIO(camera.get_LatestContent())
+        inputImage = Image.open(camLatestBytes).convert("RGB")
+        camPreviousBytes = BytesIO(camera.get_PreviousContent())
+        previousImage = Image.open(camPreviousBytes).convert("RGB")
         diff_ratio = 0
-        if previousImage == None:
+        if previousImage is None:
             print("None")
             previousImage = inputImage
 
         diff = ImageChops.difference(inputImage, previousImage)
         stat = ImageStat.Stat(diff)
-        diff_ratio = (sum(stat.mean) / (len(stat.mean) * 255)) *100
+        diff_ratio = (sum(stat.mean) / (len(stat.mean) * 255)) * 100
         print("diff ratio : {}".format(diff_ratio))
         return diff_ratio
 
-
-    def _analyse_image(self,camera, timeStamp):
+    def _analyse_image(self, camera, timeStamp):
         """
         _analyse_image
         params:
         camera      camera object to obtain settings and previous image
         timeStamp   for saving the files if something interesting is found
         """
-        logging.debug("{}._analyse_image({},{}".format(__name__, camera.name, timeStamp))
+        logging.debug("{}._analyse_image({},{}".format(__name__,
+                                                       camera.name,
+                                                       timeStamp))
         print("_analyse_image")
-        target_file_folder = "{}/data/analyzed/{}".format(self.current_working_dir, timeStamp.strftime("%Y%m%d"))
-        parent_filename = "{}_{}-analyzed.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"), camera.name)
-
+        foldername = timeStamp.strftime("%Y%m%d")
+        fileDateName = timeStamp.strftime("%Y%m%d-%H%M%S")
+        target_file_folder = "{}/data/analyzed/{}".format(self.cwd,
+                                                          foldername)
+        parent_filename = "{}_{}-analyzed.jpg".format(fileDateName,
+                                                      camera.name)
 
         inputBytes = camera.get_LatestContent()
-        response = self.ANALYZER.analyze(inputBytes) # should be input bytes
+        response = self.ANALYZER.analyze(inputBytes)  # should be input bytes
         logging.debug("DEEPSTACK status : {}".format(response["success"]))
         if response:
-            logging.debug("DEEPSTACK responses : {}".format(response["predictions"]))
+            logging.debug("responses : {}".format(response["predictions"]))
             image = Image.open(BytesIO(inputBytes)).convert("RGB")
             safeFile = False
-            i=0
-            draw = ImageDraw.Draw(image) #renamed image_org to image
+            i = 0
+            draw = ImageDraw.Draw(image)  # renamed image_org to image
             for item in response["predictions"]:
                 label = item["label"]
                 y_max = int(item["y_max"])
@@ -192,30 +205,38 @@ class CIPS:
                     safeFile = True
                 if self.SAFE_CROPPED_FILES:
                     cropped = image.crop((x_min, y_min, x_max, y_max))
+                    timeName = timeStamp.strftime("%Y%m%d-%H%M%S")
                     print("saving analyzed object : {}".format(label))
-                    filename = "{}_{}_{}-{}.jpg".format(timeStamp.strftime("%Y%m%d-%H%M%S"),camera.name, label, i)
-                    logging.debug("Saving cropped image {} to {}".format(filename, target_file_folder))
+                    filename = "{}_{}_{}-{}.jpg".format(timeName,
+                                                        camera.name,
+                                                        label,
+                                                        i)
+                    logging.debug("Saving cropped image {}".format(filename) +
+                                  " to {}".format(target_file_folder))
                     if not os.path.exists(target_file_folder):
-                        logging.debug("need to create target folder {}".format(target_file_folder))
+                        logging.debug("need to create target folder")
                         os.makedirs(target_file_folder)
                     cropped.save("{}/{}".format(target_file_folder, filename))
 
-                draw.rectangle([x_min, y_min, x_max, y_max], fill=None, outline="green", width=2)
+                draw.rectangle([x_min, y_min, x_max, y_max],
+                               fill=None,
+                               outline="green",
+                               width=2)
                 text = label + " - " + confidence + "%"
                 draw.text((x_min+20, y_min+20), text)
                 i += 1
             if safeFile:
                 print("only saving image once something of interest is found")
-                safeTarget = "{}/{}".format(target_file_folder, parent_filename)
+                safeTarget = "{}/{}".format(target_file_folder,
+                                            parent_filename)
                 if not os.path.exists(target_file_folder):
-                    logging.debug("need to create target folder {}".format(target_file_folder))
+                    logging.debug("need to create target folder")
                     os.makedirs(target_file_folder)
-                image.save(safeTarget,"JPEG")
+                image.save(safeTarget, "JPEG")
         else:
             print(response["error"])
 
-
-    def createVideo(self,folder):
+    def createVideo(self, folder):
         """
         Create an video file from files in a folder
         """
@@ -224,22 +245,21 @@ class CIPS:
         folderContent = sorted(os.listdir(folder))
         for filename in folderContent:
             if filename.endswith(".jpg"):
-                img = cv2.imread("{}/{}".format(folder,filename))
+                img = cv2.imread("{}/{}".format(folder, filename))
                 height, width, layers = img.shape
-                size = (width,height)
+                size = (width, height)
                 img_array.append(img)
 
         fps = 2
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter('{}/output.avi'.format(folder),fourcc, fps, size)
+        out = cv2.VideoWriter('{}/output.avi'.format(folder),
+                              fourcc,
+                              fps,
+                              size)
         for i in range(len(img_array)):
             out.write(img_array[i])
         out.release()
         logging.info("[+] done rendering video for folder {}".format(folder))
-
-
-
-
 
     def _image_entropy(self, img):
         """calculate the entropy of an image"""
@@ -248,24 +268,27 @@ class CIPS:
         histogram = img.histogram()
         histogram_length = sum(histogram)
         samples_probability = [float(h) / histogram_length for h in histogram]
-        return -sum([p * math.log(p, 2) for p in samples_probability if p != 0])
-
+        formula = [p * math.log(p, 2) for p in samples_probability if p != 0]
+        return -sum(formula)
 
     def _safe_image(self, image, folder, filename):
         """
         param image : image object to be saved
-        param folder : destination folder 
+        param folder : destination folder
         param filename : filename of the file
         """
-        logging.debug("{}._safe_image(img, {}, {}".format(__name__, folder, filename))
+        logging.debug("{}._safe_image(img, {}, {}".format(__name__,
+                                                          folder,
+                                                          filename))
         if not os.path.exists(folder):
-            logging.debug("{}._safe_image : need to create target {}".format(__name__, folder))
             os.makedirs(folder)
         try:
             with open("{}/{}.jpg".format(folder, filename), "wb") as latest:
                 latest.write(image)
         except OSError:
-            logging.error("{}._safe_image : Failed saving file {} to {}".format(__name__, filename, folder))
+            logging.error("Failed saving file" +
+                          "{} to {}".format(filename,
+                                            folder))
 
     """
         _current_timeStamp
