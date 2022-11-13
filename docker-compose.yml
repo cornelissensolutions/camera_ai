@@ -10,13 +10,14 @@ services:
     networks:
       - cameraai
     ports:
-      - 80:80
+      - 82:80
     volumes:
       # - ./data_home_app_data:/home/app/data
       - CIPS-volume:/home/app/data
     restart: unless-stopped
 
   visiondetection:
+    container_name: visiondetection
   # docker run -d -p 123:5000 -e VISION-DETECTION=True deepquestai/deepstack
     image: deepquestai/deepstack:arm64-2022.01.1
 
