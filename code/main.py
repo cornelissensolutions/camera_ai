@@ -155,6 +155,7 @@ CONFIG_FOLDER = '{}/config'.format(current_working_dir)
 ALLOWED_EXTENSIONS = {'txt', 'ini'}
 
 app = Flask(__name__, template_folder='templates')
+print("start")
 CIPS = CIPS_Analyzer.CIPS()
 CAMERAS = []
 
@@ -546,11 +547,14 @@ autoTimer = AutoAnalysisTimer(0.2, getImageStream)
 HASH = ""
 
 if __name__ == '__main__':
-    HASH = subprocess.check_output(['git',
+    """    HASH = subprocess.check_output(['git',
                                     'log',
                                     '-1',
                                     "--pretty=format:'%ci'"])
     HASH = HASH.decode('ascii').strip()
+    """
+    print("start main")
+    HASH = "dEbug"
     app.debug = True
     app.config['CONFIG_FOLDER'] = CONFIG_FOLDER
     app.run(host="0.0.0.0", port=80)

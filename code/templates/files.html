@@ -3,27 +3,22 @@
 <h1>{{ request.path }}</h1>
 <table>
     <tr>
-        <td>
+        <td><a href="..">UP </a></td>
             <ul>
-                <li>
-                    <a href="..">..</a> 
-                </li>
                 {% for file in files %}
-                <li>
-            <!--        <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
-                        {{ (request.path + '/' if request.path != '/' else '') + file }} 
-                    </a>
-                -->
-
-                <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
-                    {{ (request.path + '/' if request.path != '/' else '') + file }} 
-                </a>
-                    <!-- <a href="{{ () }}">DELETE </a> -->
-                </li>
+                <tr>
+                    <td>
+                        <li>
+                        <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
+                            {{ (request.path + '/' if request.path != '/' else '') + file }} 
+                        </a>
+                            <!-- <a href="{{ () }}">DELETE </a> -->
+                        </li>
+                    </td>
+                    <td><a href="delete({{ request.path+'/'+file}})">Delete</a></td>
+                </tr>
                 {% endfor %}
             </ul>
         </td>
-        <td>Delete</td>
-        <td>click</td>
     </tr>
 </table>
