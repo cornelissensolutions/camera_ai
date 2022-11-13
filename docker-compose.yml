@@ -10,7 +10,7 @@ services:
     networks:
       - cameraai
     ports:
-      - 82:80
+      - 80:80
     volumes:
       # - ./data_home_app_data:/home/app/data
       - CIPS-volume:/home/app/data

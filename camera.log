@@ -1,0 +1,15 @@
+2022-11-13 12:44:49,059 - INFO - MainThread ::  	Init CIPS_Analyzer
+2022-11-13 12:44:49,059 - INFO - MainThread ::  	Init CIPS_Analyzer
+2022-11-13 12:44:49,067 - WARNING - MainThread ::  	 * Debugger is active!
+2022-11-13 12:44:49,074 - INFO - MainThread ::  	 * Debugger PIN: 849-960-769
+2022-11-13 12:44:54,591 - INFO - Thread-2 ::  	127.0.0.1 - - [13/Nov/2022 12:44:54] "GET / HTTP/1.1" 200 -
+2022-11-13 12:44:54,605 - INFO - Thread-3 ::  	127.0.0.1 - - [13/Nov/2022 12:44:54] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2022-11-13 12:44:58,314 - INFO - Thread-4 ::  	127.0.0.1 - - [13/Nov/2022 12:44:58] "GET /cameras HTTP/1.1" 200 -
+2022-11-13 12:44:59,158 - INFO - Thread-5 ::  	127.0.0.1 - - [13/Nov/2022 12:44:59] "[35m[1mGET /loadCameras HTTP/1.1[0m" 500 -
+2022-11-13 12:44:59,173 - INFO - Thread-6 ::  	127.0.0.1 - - [13/Nov/2022 12:44:59] "GET /loadCameras?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1" 200 -
+2022-11-13 12:44:59,173 - INFO - Thread-7 ::  	127.0.0.1 - - [13/Nov/2022 12:44:59] "GET /loadCameras?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1" 200 -
+2022-11-13 12:44:59,181 - INFO - Thread-8 ::  	127.0.0.1 - - [13/Nov/2022 12:44:59] "GET /loadCameras?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1" 200 -
+2022-11-13 12:44:59,200 - INFO - Thread-9 ::  	127.0.0.1 - - [13/Nov/2022 12:44:59] "GET /loadCameras?__debugger__=yes&cmd=resource&f=ubuntu.ttf HTTP/1.1" 200 -
+2022-11-13 12:44:59,205 - INFO - Thread-10 ::  	127.0.0.1 - - [13/Nov/2022 12:44:59] "GET /loadCameras?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1" 200 -
+2022-11-13 12:45:08,339 - INFO - Thread-11 ::  	127.0.0.1 - - [13/Nov/2022 12:45:08] "GET / HTTP/1.1" 200 -
+2022-11-13 12:45:09,653 - INFO - Thread-12 ::  	127.0.0.1 - - [13/Nov/2022 12:45:09] "GET /stopServer HTTP/1.1" 200 -

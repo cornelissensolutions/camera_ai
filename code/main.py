@@ -547,15 +547,16 @@ autoTimer = AutoAnalysisTimer(0.2, getImageStream)
 HASH = ""
 
 if __name__ == '__main__':
-    """    HASH = subprocess.check_output(['git',
-                                    'log',
-                                    '-1',
-                                    "--pretty=format:'%ci'"])
-    HASH = HASH.decode('ascii').strip()
-    """
-    print("start main")
-    HASH = "dEbug"
+    # HASH = subprocess.check_output(['git',
+    #                                 'log',
+    #                                 '-1',
+    #                                 "--pretty=format:'%ci'"])
+    # HASH = HASH.decode('ascii').strip()
+    HASH = "latest"
     app.debug = True
+    print(CONFIG_FOLDER)
     app.config['CONFIG_FOLDER'] = CONFIG_FOLDER
+    print("starting app")
     app.run(host="0.0.0.0", port=80)
+    print("loading camera")
     loadCamerasFromConfig()

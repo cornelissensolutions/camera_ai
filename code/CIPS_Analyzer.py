@@ -1,23 +1,22 @@
-""""
+"""
 Image analyzer class
 """
-
-from io import BytesIO
 import logging
+import math
 import os
 import os.path
-import math
-from PIL import Image, ImageDraw, ImageChops, ImageStat
-
-import requests
 from datetime import datetime
-#import cv2
+from io import BytesIO
+# import cv2
+import requests
+from PIL import Image, ImageChops, ImageDraw, ImageStat
 
 
 class DEEPSTACK:
-    def __init__(self, URL=""):
+    timeoutTime = 10
+    def __init__(self, url=""):
         logging.info("Init {}".format(__name__))
-        self.url = URL
+        self.url = url
         self.status = False
         # self.online = self.getStatus()
 
@@ -30,7 +29,8 @@ class DEEPSTACK:
         try:
             response = requests.post(self.url,
                                      files={"image": img},
-                                     data={"api_key": ""}).json()
+                                     data={"api_key": ""},
+                                     timeout=self.timeoutTime).json()
         except ConnectionError:
             logging.error("Connection error to Analyzer")
             return False
@@ -44,7 +44,8 @@ class DEEPSTACK:
         url = ("/".join(self.url.split("/")[0:3]))
         logging.debug("get status from url : {}".format(url))
         try:
-            response = requests.get(url)
+            response = requests.get(url,
+                                    timeout=self.timeoutTime)
         except ConnectionRefusedError:
             logging.debug("failed connecting")
             self.status = False
@@ -60,15 +61,19 @@ class DEEPSTACK:
         else:
             self.status = False
 
-    """
+
+    def update_url(self, url):
+        """
         Update Deepstack URL to point to another server
-    """
-    def updateURL(self, url):
+        """
         self.url = url
         self.getStatus()
 
 
 class NOTIFIER:
+    """
+    FGET NOTIFICATIONS
+    """
     def __init__(self, url):
         logging.info("Init {}".format(__name__))
         # https://core.telegram.org/bots/api#sendmessage
@@ -87,8 +92,8 @@ class CIPS:
     def __init__(self):
         print("init CIPS Analyzer")
         logging.info("Init {}".format(__name__))
-        self.init_DeepStack("http://10.0.66.4:123/v1/vision/detection")
-
+        self.init_DeepStack("http://visiondetection:123/v1/vision/detection")
+        print("loaded deepstack endpoint")
     def init_DeepStack(self, url):
         self.ANALYZER = DEEPSTACK(url)
 
@@ -108,7 +113,7 @@ class CIPS:
         return self.DEBUG
 
     def updateEndpointURL(self, url):
-        self.ANALYZER.updateURL(url)
+        self.ANALYZER.update_url(url)
         return self.ANALYZER.url
 
     """
