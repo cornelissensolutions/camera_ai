@@ -3,3 +3,6 @@ code/data/*
 *.pyc
 data/*.db
 code/*.log
+code/*.log.*
+code/*.jpg
+code/*.avi

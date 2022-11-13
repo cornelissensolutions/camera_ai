@@ -2,12 +2,15 @@ version: "3.3"
 
 services:
   cameraai:
-    container_name: cameraai
-    build: .
+    image: cornelissensolutions/cameraai:latest
+    #container_name: cameraai
+    #build: .
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
+    networks:
+      - cameraai
     ports:
       - 82:80
     volumes:
@@ -16,15 +19,22 @@ services:
     restart: unless-stopped
 
   visiondetection:
-  # sudo docker pull deepquestai/deepstack:arm64-2022.01.1
+  # docker run -d -p 123:5000 -e VISION-DETECTION=True deepquestai/deepstack
+  
     image: deepquestai/deepstack:arm64-2022.01.1
-    ports:
-      - 123:5000
+
     environment:
       - VISION-DETECTION=True
+    networks:
+      - cameraai
+    ports:
+      - 123:5000
     volumes:
       - ./data:/datastore
     restart: unless-stopped
 
+networks:
+  cameraai:
+    driver: bridge
 volumes:
   CIPS-volume:    

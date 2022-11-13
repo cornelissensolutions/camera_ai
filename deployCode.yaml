@@ -1,6 +1,6 @@
 #--extra-vars '{"application":"name"}'
 - name: Setup cameraai on Home server
-  hosts: Home04
+  hosts: Home02
   remote_user: "{{ remote_user }}"
   become: yes
   vars_files:

@@ -1,21 +1,24 @@
 <!doctype html>
 <title>Path: {{ request.path }}</title>
 <h1>{{ request.path }}</h1>
-
-<ul>
-    <li>
-        <a href="..">..</a> 
-    </li>
-    {% for file in files %}
-    <li>
-<!--        <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
-            {{ (request.path + '/' if request.path != '/' else '') + file }} 
-        </a>
-    -->
-    <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
-        {{ (request.path + '/' if request.path != '/' else '') + file }} 
-    </a>
-        <!-- <a href="{{ () }}">DELETE </a> -->
-    </li>
-    {% endfor %}
-</ul>
+<table>
+    <tr>
+        <td><a href="..">UP </a></td>
+            <ul>
+                {% for file in files %}
+                <tr>
+                    <td>
+                        <li>
+                        <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
+                            {{ (request.path + '/' if request.path != '/' else '') + file }} 
+                        </a>
+                            <!-- <a href="{{ () }}">DELETE </a> -->
+                        </li>
+                    </td>
+                    <td><a href="delete({{ request.path+'/'+file}})">Delete</a></td>
+                </tr>
+                {% endfor %}
+            </ul>
+        </td>
+    </tr>
+</table>

@@ -3,10 +3,10 @@ reduce log file size
 
 
 TECHNICAL
-save images based on timezone 
 support for multiple cameras with different timers
 remove captured picture file
-
+show actual disk space
+clean up policy of folders older then xx days
 DEBUG / STATUS
 add real time logging viewer 
 show status of camera (online offline)
@@ -14,16 +14,19 @@ show status of deep stack (online / offline / busy??)
 run analysis based on provided images
 
 FUNCTIONAL
-text in different color then background color
-add exclude area on camera feed
-add person too long in view recording
-add saving of videostream instead of single images
-add changing timer frequency via web ui without interference of loading the frontpage
-automatic changing timer frequency based on throughput
-getcamera feed from camera class instead of analysis class
-easy walk through images by arrow keys / swiping
+add saving of videostream instead of single images ! 
 combine detections to movie / gif. based on all detections happened within 3 min after last detection
+videocreation on seperate thread / report on progress? 
 
+
+text in different color then background color
+
+add exclude area on camera feed
+add include area on camera feed
+add person too long in view recording
+automatic changing timer frequency based on throughput
+easy walk through images by arrow keys / swiping
 delete raw files older then xx days
-
+save images to different location
+videocreation on seperate thread / report on progress? -> partially implemented
 

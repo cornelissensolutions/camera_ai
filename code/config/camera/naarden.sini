@@ -1,0 +1,10 @@
+
+[CAMERA]
+name = naarden
+brand = Hikvision
+model = cam
+ip = 10.0.66.70
+url = http://136.143.78.185:89/jpg/image.jpg
+username = 
+password = 
+exclude_objects = ["chair", "bench", "potted plant", "motorcycle", "bird", "sports_ball"]

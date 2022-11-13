@@ -1,5 +1,5 @@
 [CAMERA]
-name = achterdeur_Colorvu
+name = camera
 brand = Hikvision
 model = cam
 ip = 10.0.66.71
