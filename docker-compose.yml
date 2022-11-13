@@ -18,8 +18,9 @@ services:
 
   visiondetection:
     container_name: visiondetection
-  # docker run -d -p 123:5000 -e VISION-DETECTION=True deepquestai/deepstack
-    image: deepquestai/deepstack:arm64-2022.01.1
+    # docker run -d -p 123:5000 -e VISION-DETECTION=True deepquestai/deepstack
+    # image: deepquestai/deepstack:arm64-2022.01.1
+    image: deepquestai/deepstack
 
     environment:
       - VISION-DETECTION=True
