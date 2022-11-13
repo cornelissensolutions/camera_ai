@@ -5,10 +5,8 @@ services:
     image: cornelissensolutions/cameraai:latest
     #container_name: cameraai
     #build: .
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
+    # environment:
+    #   - TZ=${TZ}
     networks:
       - cameraai
     ports:
