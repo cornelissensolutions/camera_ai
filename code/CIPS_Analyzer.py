@@ -96,7 +96,7 @@ class CIPS:
     def __init__(self):
         print("init CIPS Analyzer")
         logging.info("Init {}".format(__name__))
-        self.init_DeepStack("http://visiondetection:123/v1/vision/detection")
+        self.init_DeepStack("http://visiondetection:5000/v1/vision/detection")
         print("loaded deepstack endpoint")
     def init_DeepStack(self, url):
         self.ANALYZER = DEEPSTACK(url)
