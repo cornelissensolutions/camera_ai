@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageChops, ImageStat
 
 import requests
 from datetime import datetime
-import cv2
+#import cv2
 
 
 class DEEPSTACK:
@@ -243,22 +243,22 @@ class CIPS:
         logging.debug("{}.createVideo()".format(__name__))
         img_array = []
         folderContent = sorted(os.listdir(folder))
-        for filename in folderContent:
-            if filename.endswith(".jpg"):
-                img = cv2.imread("{}/{}".format(folder, filename))
-                height, width, layers = img.shape
-                size = (width, height)
-                img_array.append(img)
+        # for filename in folderContent:
+        #     if filename.endswith(".jpg"):
+        #         img = cv2.imread("{}/{}".format(folder, filename))
+        #         height, width, layers = img.shape
+        #         size = (width, height)
+        #         img_array.append(img)
 
-        fps = 2
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter('{}/output.avi'.format(folder),
-                              fourcc,
-                              fps,
-                              size)
-        for i in range(len(img_array)):
-            out.write(img_array[i])
-        out.release()
+        # fps = 2
+        # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        # out = cv2.VideoWriter('{}/output.avi'.format(folder),
+        #                       fourcc,
+        #                       fps,
+        #                       size)
+        # for i in range(len(img_array)):
+        #     out.write(img_array[i])
+        # out.release()
         logging.info("[+] done rendering video for folder {}".format(folder))
 
     def _image_entropy(self, img):
