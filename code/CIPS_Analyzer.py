@@ -54,6 +54,10 @@ class DEEPSTACK:
             logging.debug("Connection error")
             self.status = False
             return
+        except TimeoutError:
+            logging.debug("connection timeout error")
+            self.status = False
+            return
 
         logging.debug("return code : {}".format(response.status_code))
         if response.status_code == 200:
@@ -113,6 +117,7 @@ class CIPS:
         return self.DEBUG
 
     def updateEndpointURL(self, url):
+        print(url)
         self.ANALYZER.update_url(url)
         return self.ANALYZER.url
 
